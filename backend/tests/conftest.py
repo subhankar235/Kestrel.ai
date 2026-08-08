@@ -7,6 +7,14 @@ import os
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["ENVIRONMENT"] = "local"
 os.environ["SENTRY_DSN"] = ""
+os.environ["OPENAI_API_KEY"] = ""
+os.environ["OPENROUTER_API_KEY"] = ""
+os.environ["OPENROUTER_MODEL"] = ""
+os.environ["OPENAI_BASE_URL"] = ""
+os.environ["BREETH_API_KEY"] = ""
+os.environ["EXA_API_KEY"] = ""
+os.environ["TAVILY_API_KEY"] = ""
+os.environ["GITHUB_TOKEN"] = ""
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
