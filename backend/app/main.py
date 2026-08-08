@@ -5,7 +5,6 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,19 +12,15 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes import agent_feed, agent_init
 from app.core.config import get_settings
-from app.core.logging import get_logger
+from app.core.logging import get_logger, init_sentry
 from app.db.session import check_db_connection
+
 
 logger = get_logger(__name__)
 settings = get_settings()
 
-if settings.SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=settings.SENTRY_DSN,
-        environment=settings.ENVIRONMENT,
-        traces_sample_rate=0.1,
-    )
-    logger.info("Sentry initialized", extra={"environment": settings.ENVIRONMENT})
+init_sentry("fastapi")
+
 
 
 @asynccontextmanager

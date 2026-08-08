@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENAI_BASE_URL: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENROUTER_MODEL: str = ""
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
 
     @property
@@ -49,9 +50,16 @@ class Settings(BaseSettings):
         """Returns base URL for OpenRouter or custom OpenAI proxy if set."""
         if self.OPENAI_BASE_URL.strip():
             return self.OPENAI_BASE_URL.strip()
-        if self.OPENROUTER_API_KEY.strip():
+        if self.OPENROUTER_API_KEY.strip() or self.OPENROUTER_MODEL.strip():
             return self.OPENROUTER_BASE_URL.strip()
         return None
+
+    @property
+    def llm_model(self) -> str:
+        """Return the configured OpenRouter model when using OpenRouter."""
+        if self.OPENROUTER_MODEL.strip():
+            return self.OPENROUTER_MODEL.strip()
+        return self.OPENAI_MODEL.strip()
 
     # --- Breeth memory ---
     BREETH_API_KEY: str = ""

@@ -8,6 +8,9 @@ os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["ENVIRONMENT"] = "local"
 os.environ["SENTRY_DSN"] = ""
 
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
 from collections.abc import AsyncGenerator
 
 import pytest_asyncio
@@ -26,11 +29,13 @@ from app.main import app  # noqa: E402
 
 @pytest_asyncio.fixture
 async def db_engine():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    engine_kwargs = {}
+    if TEST_DATABASE_URL.startswith("sqlite"):
+        engine_kwargs = {
+            "connect_args": {"check_same_thread": False},
+            "poolclass": StaticPool,
+        }
+    engine = create_async_engine(TEST_DATABASE_URL, **engine_kwargs)
     async with engine.begin() as conn:
         await conn.run_sync(base.Base.metadata.create_all)
     yield engine
