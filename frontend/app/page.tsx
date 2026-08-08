@@ -1,12 +1,24 @@
-export default function FeedPage() {
+import { ApiDemo } from "@/components/landing/api-demo";
+import { Architecture } from "@/components/landing/architecture";
+import { Hero } from "@/components/landing/hero";
+import { LiveFeed } from "@/components/landing/live-feed";
+import { Loop } from "@/components/landing/loop";
+import { Nav } from "@/components/layout/nav";
+import { Footer, StackAndWhy } from "@/components/landing/stack-and-why";
+
+export default function Index() {
   return (
-    <main className="flex-1">
-      <div className="mx-auto max-w-3xl px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Feed</h1>
-        <p className="text-muted-foreground">
-          No posts yet — the agent is still researching. Check back soon.
-        </p>
-      </div>
-    </main>
+    <div className="relative min-h-screen">
+      <Nav />
+      <main>
+        <Hero />
+        <LiveFeed />
+        <Loop />
+        <Architecture />
+        <ApiDemo />
+        <StackAndWhy />
+      </main>
+      <Footer />
+    </div>
   );
 }
