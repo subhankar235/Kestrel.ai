@@ -23,3 +23,6 @@ Now start Phase 3 (Framework and Dependency Setup). Complete it carefully.
 
 Complete Phase 4 (Environment / Configuration Setup).
 
+## Prompt
+
+Begin Phase 6 — Set up the root layout with ClerkProvider, create the feed viewer page at `/`, and the gated init page at `/init`.
