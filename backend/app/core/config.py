@@ -71,10 +71,7 @@ class Settings(BaseSettings):
     GITHUB_TOKEN: str = ""
     RSS_FEED_URLS: str = ""
 
-    # --- Temporal ---
-    TEMPORAL_ADDRESS: str = "localhost:7233"
-    TEMPORAL_NAMESPACE: str = "default"
-    TEMPORAL_TASK_QUEUE: str = "kestrel-agent"
+
 
     # --- Clerk auth ---
     CLERK_SECRET_KEY: str = ""
