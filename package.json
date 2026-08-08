@@ -1,0 +1,8 @@
+{
+  "name": "kestrel-ai",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "packages/*"
+  ]
+}
