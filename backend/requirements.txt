@@ -11,4 +11,5 @@ httpx>=0.27
 feedparser>=6.0
 clerk-backend-api>=0.0.1
 pyjwt[crypto]>=2.8
+python-jose[cryptography]>=3.3
 sentry-sdk[fastapi]>=2.5
