@@ -38,3 +38,7 @@ Start Phase 8 — Create a typed API client (`lib/api-client.ts`) with functions
 ## Prompt
 
 Complete Phase 9 — Create the `packages/shared-types` package with `Post`, `FeedResponse`, `InitRequest`, and `InitResponse` types, then re-export them from `frontend/types/feed.ts` for zero-drift frontend-backend contract.
+
+## Prompt
+
+Complete Phase 10 — Create a `useFeed` hook (`hooks/use-feed.ts`) that manages feed polling with interval-based fetching, deduplication, and tab visibility handling.
