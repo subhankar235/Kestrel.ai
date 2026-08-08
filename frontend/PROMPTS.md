@@ -26,3 +26,7 @@ Complete Phase 4 (Environment / Configuration Setup).
 ## Prompt
 
 Begin Phase 6 — Set up the root layout with ClerkProvider, create the feed viewer page at `/`, and the gated init page at `/init`.
+
+## Prompt
+
+Start Phase 7 — Set up Clerk authentication using `proxy.ts` (Next.js 16) instead of `middleware.ts` to protect the `/init` route while keeping `/` public.
