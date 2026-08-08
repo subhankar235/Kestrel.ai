@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -79,68 +79,72 @@ class TestActivities:
         assert "post_text" in drafts[0] or "text" in drafts[0]
 
 
+def _make_activity_mocks(mock_execute_map: dict) -> dict:
+    """Create patch context managers for each activity function."""
+    patches = {}
+    for activity_name, return_value in mock_execute_map.items():
+        if callable(return_value) and not isinstance(return_value, (dict, list)):
+            patches[activity_name] = patch(
+                f"app.workflows.agent_workflow.{activity_name}",
+                side_effect=return_value,
+            )
+        else:
+            patches[activity_name] = patch(
+                f"app.workflows.agent_workflow.{activity_name}",
+                new_callable=AsyncMock,
+                return_value=return_value,
+            )
+    return patches
+
+
 class TestAgentWorkflowExecution:
     @pytest.mark.asyncio
-    async def test_workflow_accept_path_mocked(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_workflow_accept_path_mocked(self) -> None:
         """Simulate workflow execution accept branch."""
         mock_topic = {"title": "Accepted AI Topic", "sources": ["https://example.com"]}
 
-        async def mock_execute(activity_func, *args, **kwargs):
-            func_name = getattr(activity_func, "__name__", str(activity_func))
-            if "discover" in func_name:
-                return [mock_topic]
-            if "recall" in func_name or "behaviors" in func_name:
-                return {"stories": []}
-            if "judge" in func_name:
-                return {"accepted": True, "reason": "Score 85 meets threshold"}
-            if "drafts" in func_name:
-                return [{"post_text": "Winning post text", "sources": ["https://example.com"]}]
-            if "critique" in func_name:
-                return {"post_text": "Winning post text", "sources": ["https://example.com"]}
-            if "persona" in func_name:
-                return {"aligned": True}
-            if "publish" in func_name:
-                return {"post_id": "p_test123", "text": "Winning post text"}
-            if "rationale" in func_name:
-                return "Selection rationale text"
-            if "breeth" in func_name or "audit" in func_name:
-                return {"status": "ok"}
-            return {}
-
-        monkeypatch.setattr("temporalio.workflow.execute_activity", mock_execute)
-
-        from app.workflows.agent_workflow import AgentWorkflow
-        wf = AgentWorkflow()
-        result = await wf.run("agent_test_123")
+        with (
+            patch("app.workflows.agent_workflow.record_and_increment_cycle_activity", new_callable=AsyncMock, return_value=1),
+            patch("app.workflows.agent_workflow.prediction_sweep_activity", new_callable=AsyncMock, return_value=[]),
+            patch("app.workflows.agent_workflow.discover_topics_activity", new_callable=AsyncMock, return_value=[mock_topic]),
+            patch("app.workflows.agent_workflow.recall_memory_activity", new_callable=AsyncMock, return_value={"stories": []}),
+            patch("app.workflows.agent_workflow.run_memory_behaviors_activity", new_callable=AsyncMock, return_value={"stories": []}),
+            patch("app.workflows.agent_workflow.editorial_judge_activity", new_callable=AsyncMock, return_value={"accepted": True, "reason": "Score 85 meets threshold"}),
+            patch("app.workflows.agent_workflow.generate_drafts_activity", new_callable=AsyncMock, return_value=[{"post_text": "Winning post text", "sources": ["https://example.com"]}]),
+            patch("app.workflows.agent_workflow.self_critique_activity", new_callable=AsyncMock, return_value={"post_text": "Winning post text", "sources": ["https://example.com"]}),
+            patch("app.workflows.agent_workflow.persona_check_activity", new_callable=AsyncMock, return_value={"aligned": True}),
+            patch("app.workflows.agent_workflow.publish_post_activity", new_callable=AsyncMock, return_value={"post_id": "p_test123", "text": "Winning post text"}),
+            patch("app.workflows.agent_workflow.build_rationale_activity", new_callable=AsyncMock, return_value="Selection rationale text"),
+            patch("app.workflows.agent_workflow.write_breeth_episode_activity", new_callable=AsyncMock, return_value={"status": "ok"}),
+            patch("app.workflows.agent_workflow.self_audit_activity", new_callable=AsyncMock, return_value={"status": "ok"}),
+        ):
+            from app.workflows.agent_workflow import AgentWorkflow
+            wf = AgentWorkflow()
+            result = await wf.run("agent_test_123")
 
         assert result["status"] == "published"
         assert result["post_id"] == "p_test123"
         assert result["text"] == "Winning post text"
 
     @pytest.mark.asyncio
-    async def test_workflow_reject_path_mocked(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_workflow_reject_path_mocked(self) -> None:
         """Simulate workflow execution reject branch."""
         mock_topic = {"title": "Low Quality Hype Topic"}
 
-        async def mock_execute(activity_func, *args, **kwargs):
-            func_name = getattr(activity_func, "__name__", str(activity_func))
-            if "discover" in func_name:
-                return [mock_topic]
-            if "recall" in func_name or "behaviors" in func_name:
-                return {}
-            if "judge" in func_name:
-                return {"accepted": False, "reason": "Score 40 below threshold 60.0"}
-            if "debt" in func_name:
-                return {"status": "logged"}
-            if "breeth" in func_name:
-                return {"status": "ok"}
-            return {}
-
-        monkeypatch.setattr("temporalio.workflow.execute_activity", mock_execute)
-
-        from app.workflows.agent_workflow import AgentWorkflow
-        wf = AgentWorkflow()
-        result = await wf.run("agent_test_123")
+        with (
+            patch("app.workflows.agent_workflow.record_and_increment_cycle_activity", new_callable=AsyncMock, return_value=1),
+            patch("app.workflows.agent_workflow.prediction_sweep_activity", new_callable=AsyncMock, return_value=[]),
+            patch("app.workflows.agent_workflow.discover_topics_activity", new_callable=AsyncMock, return_value=[mock_topic]),
+            patch("app.workflows.agent_workflow.recall_memory_activity", new_callable=AsyncMock, return_value={}),
+            patch("app.workflows.agent_workflow.run_memory_behaviors_activity", new_callable=AsyncMock, return_value={}),
+            patch("app.workflows.agent_workflow.editorial_judge_activity", new_callable=AsyncMock, return_value={"accepted": False, "reason": "Score 40 below threshold 60.0"}),
+            patch("app.workflows.agent_workflow.log_topic_debt_activity", new_callable=AsyncMock, return_value={"status": "logged"}),
+            patch("app.workflows.agent_workflow.write_breeth_episode_activity", new_callable=AsyncMock, return_value={"status": "ok"}),
+            patch("app.workflows.agent_workflow.self_audit_activity", new_callable=AsyncMock, return_value={"status": "ok"}),
+        ):
+            from app.workflows.agent_workflow import AgentWorkflow
+            wf = AgentWorkflow()
+            result = await wf.run("agent_test_123")
 
         assert result["status"] == "rejected"
         assert result["topic"] == "Low Quality Hype Topic"
