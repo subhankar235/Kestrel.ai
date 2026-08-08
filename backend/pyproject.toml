@@ -21,6 +21,7 @@ dependencies = [
     "feedparser>=6.0",
     "clerk-backend-api>=0.0.1",
     "pyjwt[crypto]>=2.8",
+    "python-jose[cryptography]>=3.3",
     "sentry-sdk[fastapi]>=2.5",
 ]
 
@@ -31,6 +32,7 @@ dev = [
     "httpx[testing]",
     "ruff>=0.4",
     "black>=24.0",
+    "aiosqlite>=0.20",
 ]
 
 [tool.setuptools.packages.find]
