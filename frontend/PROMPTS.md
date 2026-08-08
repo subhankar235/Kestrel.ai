@@ -30,3 +30,7 @@ Begin Phase 6 — Set up the root layout with ClerkProvider, create the feed vie
 ## Prompt
 
 Start Phase 7 — Set up Clerk authentication using `proxy.ts` (Next.js 16) instead of `middleware.ts` to protect the `/init` route while keeping `/` public.
+
+## Prompt
+
+Start Phase 8 — Create a typed API client (`lib/api-client.ts`) with functions for `initAgent` (POST, authenticated) and `getFeed` (GET, public), including error handling and shared type exports.
