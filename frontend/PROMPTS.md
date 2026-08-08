@@ -42,3 +42,7 @@ Complete Phase 9 — Create the `packages/shared-types` package with `Post`, `Fe
 ## Prompt
 
 Complete Phase 10 — Create a `useFeed` hook (`hooks/use-feed.ts`) that manages feed polling with interval-based fetching, deduplication, and tab visibility handling.
+
+## Prompt
+
+Complete Phase 11 — Build feed components (`post-card`, `rationale-panel`, `story-thread`, `prediction-badge`, `rejected-topic-badge`) and the `persona-header` component.
