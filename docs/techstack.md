@@ -27,8 +27,8 @@
 ## Agent Orchestration
 | Technology | Why |
 |---|---|
-| **Temporal** | Runs the background worker as a durable workflow — discovery → Breeth recall → editorial judgment → drafting → publish → write-back — with retries and zero human input across the 48 hours. |
-| **Temporal Schedules** | Triggers each research/publish cycle on an interval so posts appear over time rather than all at once, satisfying the "autonomous publishing" requirement. |
+| **APScheduler (in-process)** | Runs the background scheduler inside the FastAPI process — triggers each research/publish cycle on an interval with zero human input across the 48 hours. |
+| **Custom async retry pipeline** | Each activity has configurable retry policies (max attempts, backoff, non-retryable errors) matching the original Temporal RetryPolicy semantics. |
 
 ## Database & Storage
 | Technology | Why |
@@ -56,14 +56,12 @@
 ## Infrastructure / Deployment
 | Technology | Why |
 |---|---|
-| **Docker** | Containerizes the FastAPI backend, Temporal worker, and Postgres for consistent deployment during evaluation. |
-| **Temporal Server (self-hosted or Temporal Cloud)** | Hosts the workflow engine keeping the agent alive and cycling for the full 48-hour window. |
+| **Docker** | Containerizes the FastAPI backend and Postgres for consistent deployment during evaluation. |
 | **Vercel** | Deploys the Next.js feed-viewer frontend. |
-| **Railway / Fly.io / Render** *(one host)* | Runs the FastAPI service, Postgres instance, and Temporal worker process. |
+| **Railway / Fly.io / Render** *(one host)* | Runs the FastAPI service and Postgres instance. No separate workflow engine needed — APScheduler runs in-process. |
 
 ## Monitoring / Logging
 | Technology | Why |
 |---|---|
-| **Temporal Web UI** | Inspects workflow run history to verify the agent operated autonomously (discovery → judgment → publish cycles) with no manual triggers. |
-| **Structured JSON logging (Python `logging`)** | Captures editorial decisions (accept/reject scores, rejection reasons) and Breeth read/write calls, feeding the self-audit/constitution-evolution step. |
+| **Structured JSON logging (Python `logging`)** | Captures editorial decisions (accept/reject scores, rejection reasons), Breeth read/write calls, and APScheduler job events, replacing the Temporal Web UI for observability. |
 | **Sentry** | Error tracking for the FastAPI service and background worker so failures during the unattended run are caught and traceable. |
