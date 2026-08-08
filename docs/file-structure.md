@@ -1,4 +1,6 @@
-Root Structure — Autonomous AI Creator Agent
+# Root Structure — Autonomous AI Creator Agent
+
+```
 .
 ├── backend/                # FastAPI service, Temporal workflows, editorial/memory logic
 ├── frontend/                # Next.js feed viewer / evaluator dashboard
@@ -10,7 +12,18 @@ Root Structure — Autonomous AI Creator Agent
 ├── README.md
 ├── docker-compose.yml         # Local dev orchestration (postgres, backend, worker, temporal, frontend)
 └── package.json               # Root workspace manifest (bun workspaces: frontend, packages/*)
+```
 
+## Purpose of top-level entries
+
+- **backend/** — Python/FastAPI service that owns the two required API endpoints, the autonomous Temporal worker cycle, editorial judgment, drafting, and Breeth memory integration. See `backend/STRUCTURE.md`.
+- **frontend/** — Next.js app that lets evaluators/humans view the feed, rationale, and story threads. Not required by the spec but supports demoing the API. See `frontend/STRUCTURE.md`.
+- **infra/** — All Docker, CI/CD pipeline, and deployment/monitoring configuration lives here rather than scattered per-service. See `infra/STRUCTURE.md`.
+- **docs/** — PRD, architecture notes, API contract, and the persona/editorial-constitution reference docs. See `docs/STRUCTURE.md`.
+- **packages/** — Shared TypeScript types (Post, FeedResponse, InitRequest/Response) so the frontend stays in sync with the backend's Pydantic schemas. See `packages/STRUCTURE.md`.
+- **docker-compose.yml** — Root-level convenience file for spinning up the full local stack in one command (delegates to files under `infra/docker/`).
+- **package.json** — Declares the Bun workspace (`frontend`, `packages/*`); the Python backend is not part of this workspace and is managed independently via `backend/pyproject.toml`.
+- **.env.example** — Only variables shared across services (e.g. `NODE_ENV`); service-specific env templates live inside `backend/`, `frontend/`, and `infra/env/`.
 
 
 # Backend Structure — FastAPI + Temporal + Breeth
