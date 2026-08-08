@@ -1,3 +1,5 @@
+import type { PersonaIn, InitRequest, InitResponse, Post, FeedResponse } from "@/types/feed";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
 export class ApiError extends Error {
@@ -8,33 +10,6 @@ export class ApiError extends Error {
     super(message);
     this.name = "ApiError";
   }
-}
-
-interface PersonaIn {
-  name: string;
-  domain: string;
-}
-
-interface InitRequest {
-  persona: PersonaIn;
-}
-
-interface InitResponse {
-  agentId: string;
-}
-
-interface Post {
-  id: string;
-  createdAt: string;
-  text: string;
-  rationale: string;
-  sources: string[];
-  relatedPostId?: string;
-  relationship?: "STORY_CONTINUATION" | "PREDICTION_RESOLUTION" | "TOPIC_RESURRECTION" | "CONCEPT_GAP";
-}
-
-interface FeedResponse {
-  posts: Post[];
 }
 
 export async function initAgent(
