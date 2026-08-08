@@ -57,7 +57,6 @@ class TestExceptionHierarchy:
     def test_discovery_timeout_is_retryable(self) -> None:
         exc = DiscoveryTimeoutError("timeout")
         assert isinstance(exc, DiscoveryTimeoutError)
-        # Not a DiscoveryAuthError → retryable
         assert not isinstance(exc, DiscoveryAuthError)
 
     def test_discovery_auth_is_non_retryable(self) -> None:
@@ -228,111 +227,65 @@ class TestWorkflowDiscoveryTimeoutFaultTolerance:
     """Core Phase 21 requirement: workflow still completes when discovery times out."""
 
     @pytest.mark.asyncio
-    async def test_discovery_timeout_workflow_completes_empty_cycle(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Simulate discover_topics_activity raising a timeout after retries.
+    async def test_discovery_timeout_workflow_completes_empty_cycle(self) -> None:
+        """Simulate discover_topics_activity returning empty after timeout.
 
-        The workflow must NOT raise. It returns {"status": "no_topics"} (or
-        "discovery_skipped") and the Temporal Schedule fires again next interval.
+        The workflow must NOT raise. It returns {"status": "no_topics"} and
+        the schedule fires again next interval.
         """
-        call_log: list[str] = []
+        with (
+            patch("app.workflows.agent_workflow.record_and_increment_cycle_activity", new_callable=AsyncMock, return_value=1),
+            patch("app.workflows.agent_workflow.prediction_sweep_activity", new_callable=AsyncMock, return_value=[]),
+            patch("app.workflows.agent_workflow.discover_topics_activity", new_callable=AsyncMock, return_value=[]),
+        ):
+            wf = AgentWorkflow()
+            result = await wf.run("agent_timeout_test")
 
-        async def mock_execute(activity_func, *args, **kwargs):
-            func_name = getattr(activity_func, "__name__", str(activity_func))
-            call_log.append(func_name)
-
-            if "record_and_increment" in func_name:
-                return 1
-            if "prediction_sweep" in func_name:
-                return []
-            if "discover" in func_name:
-                # Simulate total discovery failure — returns empty list
-                # (activity catches internally and returns [])
-                return []
-            return {}
-
-        monkeypatch.setattr("temporalio.workflow.execute_activity", mock_execute)
-
-        wf = AgentWorkflow()
-        result = await wf.run("agent_timeout_test")
-
-        # Workflow MUST complete without raising
         assert result is not None
         assert result["status"] == "no_topics"
         assert result["agent_id"] == "agent_timeout_test"
         assert result["cycle_count"] == 1
-        assert "record_and_increment_cycle_activity" in call_log
-        assert "discover_topics_activity" in call_log
 
     @pytest.mark.asyncio
-    async def test_discovery_raises_exception_workflow_returns_skipped(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Simulate discover_topics_activity raising an exception (after Temporal retries exhaust).
+    async def test_discovery_raises_exception_workflow_returns_skipped(self) -> None:
+        """Simulate discover_topics_activity raising an exception.
 
         The workflow catches the exception and returns {"status": "discovery_skipped"}.
         """
-        async def mock_execute(activity_func, *args, **kwargs):
-            func_name = getattr(activity_func, "__name__", str(activity_func))
-
-            if "record_and_increment" in func_name:
-                return 1
-            if "prediction_sweep" in func_name:
-                return []
-            if "discover" in func_name:
-                raise DiscoveryTimeoutError("All sources timed out after max retries")
-            return {}
-
-        monkeypatch.setattr("temporalio.workflow.execute_activity", mock_execute)
-
-        wf = AgentWorkflow()
-        result = await wf.run("agent_discovery_crash_test")
+        with (
+            patch("app.workflows.agent_workflow.record_and_increment_cycle_activity", new_callable=AsyncMock, return_value=1),
+            patch("app.workflows.agent_workflow.prediction_sweep_activity", new_callable=AsyncMock, return_value=[]),
+            patch("app.workflows.agent_workflow.discover_topics_activity", new_callable=AsyncMock, side_effect=DiscoveryTimeoutError("All sources timed out after max retries")),
+        ):
+            wf = AgentWorkflow()
+            result = await wf.run("agent_discovery_crash_test")
 
         assert result["status"] == "discovery_skipped"
         assert result["agent_id"] == "agent_discovery_crash_test"
         assert result["self_audit_executed"] is False
 
     @pytest.mark.asyncio
-    async def test_workflow_accept_path_still_works_after_memory_failure(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_workflow_accept_path_still_works_after_memory_failure(self) -> None:
         """Memory recall failure does not block the accept path — empty context is used."""
         mock_topic = {"title": "AI Resilience Test", "sources": ["https://example.com/paper"]}
 
-        async def mock_execute(activity_func, *args, **kwargs):
-            func_name = getattr(activity_func, "__name__", str(activity_func))
-
-            if "record_and_increment" in func_name:
-                return 1
-            if "prediction_sweep" in func_name:
-                return []
-            if "discover" in func_name:
-                return [mock_topic]
-            if "recall" in func_name:
-                raise BreethTimeoutError("Breeth timed out")
-            if "behaviors" in func_name:
-                raise BreethServerError(status_code=503, detail="overloaded")
-            if "judge" in func_name:
-                return {"accepted": True, "reason": "Score 85"}
-            if "drafts" in func_name:
-                return [{"post_text": "Resilient post", "sources": ["https://example.com"]}]
-            if "critique" in func_name:
-                return {"post_text": "Resilient post", "sources": ["https://example.com"]}
-            if "persona" in func_name:
-                return {"aligned": True}
-            if "publish" in func_name:
-                return {"post_id": "p_resilient", "text": "Resilient post"}
-            if "rationale" in func_name:
-                return "Resilience rationale"
-            if "breeth" in func_name:
-                return {"status": "ok"}
-            return {}
-
-        monkeypatch.setattr("temporalio.workflow.execute_activity", mock_execute)
-
-        wf = AgentWorkflow()
-        result = await wf.run("agent_memory_fail_test")
+        with (
+            patch("app.workflows.agent_workflow.record_and_increment_cycle_activity", new_callable=AsyncMock, return_value=1),
+            patch("app.workflows.agent_workflow.prediction_sweep_activity", new_callable=AsyncMock, return_value=[]),
+            patch("app.workflows.agent_workflow.discover_topics_activity", new_callable=AsyncMock, return_value=[mock_topic]),
+            patch("app.workflows.agent_workflow.recall_memory_activity", new_callable=AsyncMock, side_effect=BreethTimeoutError("Breeth timed out")),
+            patch("app.workflows.agent_workflow.run_memory_behaviors_activity", new_callable=AsyncMock, side_effect=BreethServerError(status_code=503, detail="overloaded")),
+            patch("app.workflows.agent_workflow.editorial_judge_activity", new_callable=AsyncMock, return_value={"accepted": True, "reason": "Score 85"}),
+            patch("app.workflows.agent_workflow.generate_drafts_activity", new_callable=AsyncMock, return_value=[{"post_text": "Resilient post", "sources": ["https://example.com"]}]),
+            patch("app.workflows.agent_workflow.self_critique_activity", new_callable=AsyncMock, return_value={"post_text": "Resilient post", "sources": ["https://example.com"]}),
+            patch("app.workflows.agent_workflow.persona_check_activity", new_callable=AsyncMock, return_value={"aligned": True}),
+            patch("app.workflows.agent_workflow.publish_post_activity", new_callable=AsyncMock, return_value={"post_id": "p_resilient", "text": "Resilient post"}),
+            patch("app.workflows.agent_workflow.build_rationale_activity", new_callable=AsyncMock, return_value="Resilience rationale"),
+            patch("app.workflows.agent_workflow.write_breeth_episode_activity", new_callable=AsyncMock, return_value={"status": "ok"}),
+            patch("app.workflows.agent_workflow.self_audit_activity", new_callable=AsyncMock, return_value={"status": "ok"}),
+        ):
+            wf = AgentWorkflow()
+            result = await wf.run("agent_memory_fail_test")
 
         assert result["status"] == "published"
         assert result["post_id"] == "p_resilient"
@@ -385,46 +338,27 @@ class TestSelfAuditFaultTolerance:
         assert result["audit_passed"] is True
 
     @pytest.mark.asyncio
-    async def test_workflow_self_audit_failure_does_not_block_publishing(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_workflow_self_audit_failure_does_not_block_publishing(self) -> None:
         """Full workflow: self-audit fails on the Nth cycle but publishing still succeeds."""
         mock_topic = {"title": "Audit-Fail Publish Test", "sources": ["https://example.com"]}
 
-        async def mock_execute(activity_func, *args, **kwargs):
-            func_name = getattr(activity_func, "__name__", str(activity_func))
-
-            if "record_and_increment" in func_name:
-                return 10  # 10th cycle triggers self-audit
-            if "prediction_sweep" in func_name:
-                return []
-            if "discover" in func_name:
-                return [mock_topic]
-            if "recall" in func_name or "behaviors" in func_name:
-                return {"stories": []}
-            if "judge" in func_name:
-                return {"accepted": True, "reason": "Score 90"}
-            if "self_audit" in func_name:
-                # Audit fails but returns skipped result (activity handles internally)
-                return {"audit_passed": False, "audit_skipped": True, "proposed_rule_updates": [], "version_bump": False}
-            if "drafts" in func_name:
-                return [{"post_text": "Post despite audit fail", "sources": ["https://example.com"]}]
-            if "critique" in func_name:
-                return {"post_text": "Post despite audit fail", "sources": ["https://example.com"]}
-            if "persona" in func_name:
-                return {"aligned": True}
-            if "publish" in func_name:
-                return {"post_id": "p_audit_fail", "text": "Post despite audit fail"}
-            if "rationale" in func_name:
-                return "Rationale text"
-            if "breeth" in func_name:
-                return {"status": "ok"}
-            return {}
-
-        monkeypatch.setattr("temporalio.workflow.execute_activity", mock_execute)
-
-        wf = AgentWorkflow()
-        result = await wf.run("agent_audit_fail_publish_test")
+        with (
+            patch("app.workflows.agent_workflow.record_and_increment_cycle_activity", new_callable=AsyncMock, return_value=10),
+            patch("app.workflows.agent_workflow.prediction_sweep_activity", new_callable=AsyncMock, return_value=[]),
+            patch("app.workflows.agent_workflow.discover_topics_activity", new_callable=AsyncMock, return_value=[mock_topic]),
+            patch("app.workflows.agent_workflow.recall_memory_activity", new_callable=AsyncMock, return_value={"stories": []}),
+            patch("app.workflows.agent_workflow.run_memory_behaviors_activity", new_callable=AsyncMock, return_value={"stories": []}),
+            patch("app.workflows.agent_workflow.editorial_judge_activity", new_callable=AsyncMock, return_value={"accepted": True, "reason": "Score 90"}),
+            patch("app.workflows.agent_workflow.self_audit_activity", new_callable=AsyncMock, return_value={"audit_passed": False, "audit_skipped": True, "proposed_rule_updates": [], "version_bump": False}),
+            patch("app.workflows.agent_workflow.generate_drafts_activity", new_callable=AsyncMock, return_value=[{"post_text": "Post despite audit fail", "sources": ["https://example.com"]}]),
+            patch("app.workflows.agent_workflow.self_critique_activity", new_callable=AsyncMock, return_value={"post_text": "Post despite audit fail", "sources": ["https://example.com"]}),
+            patch("app.workflows.agent_workflow.persona_check_activity", new_callable=AsyncMock, return_value={"aligned": True}),
+            patch("app.workflows.agent_workflow.publish_post_activity", new_callable=AsyncMock, return_value={"post_id": "p_audit_fail", "text": "Post despite audit fail"}),
+            patch("app.workflows.agent_workflow.build_rationale_activity", new_callable=AsyncMock, return_value="Rationale text"),
+            patch("app.workflows.agent_workflow.write_breeth_episode_activity", new_callable=AsyncMock, return_value={"status": "ok"}),
+        ):
+            wf = AgentWorkflow()
+            result = await wf.run("agent_audit_fail_publish_test")
 
         assert result["status"] == "published"
         assert result["post_id"] == "p_audit_fail"
@@ -581,86 +515,53 @@ class TestWorkflowMultipleFailuresResilience:
     """Workflow survives multiple independent failures in one cycle."""
 
     @pytest.mark.asyncio
-    async def test_workflow_survives_prediction_sweep_and_memory_and_audit_failures(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_workflow_survives_prediction_sweep_and_memory_and_audit_failures(self) -> None:
         """Prediction sweep fails, memory recall fails, self-audit fails — but
         the workflow still publishes successfully."""
         mock_topic = {"title": "Multi-Fail Resilience", "sources": ["https://example.com"]}
 
-        async def mock_execute(activity_func, *args, **kwargs):
-            func_name = getattr(activity_func, "__name__", str(activity_func))
+        with (
+            patch("app.workflows.agent_workflow.record_and_increment_cycle_activity", new_callable=AsyncMock, return_value=10),
+            patch("app.workflows.agent_workflow.prediction_sweep_activity", new_callable=AsyncMock, side_effect=BreethTimeoutError("Breeth down for predictions")),
+            patch("app.workflows.agent_workflow.discover_topics_activity", new_callable=AsyncMock, return_value=[mock_topic]),
+            patch("app.workflows.agent_workflow.recall_memory_activity", new_callable=AsyncMock, side_effect=BreethTimeoutError("Breeth down for recall")),
+            patch("app.workflows.agent_workflow.run_memory_behaviors_activity", new_callable=AsyncMock, side_effect=RuntimeError("Behaviors crashed")),
+            patch("app.workflows.agent_workflow.editorial_judge_activity", new_callable=AsyncMock, return_value={"accepted": True, "reason": "Score 92"}),
+            patch("app.workflows.agent_workflow.self_audit_activity", new_callable=AsyncMock, side_effect=SelfAuditError("Audit DB down")),
+            patch("app.workflows.agent_workflow.generate_drafts_activity", new_callable=AsyncMock, return_value=[{"post_text": "Resilient multi-fail post", "sources": ["https://example.com"]}]),
+            patch("app.workflows.agent_workflow.self_critique_activity", new_callable=AsyncMock, return_value={"post_text": "Resilient multi-fail post", "sources": ["https://example.com"]}),
+            patch("app.workflows.agent_workflow.persona_check_activity", new_callable=AsyncMock, side_effect=LLMAuthError(detail="API key expired")),
+            patch("app.workflows.agent_workflow.publish_post_activity", new_callable=AsyncMock, return_value={"post_id": "p_multi_fail", "text": "Resilient multi-fail post"}),
+            patch("app.workflows.agent_workflow.build_rationale_activity", new_callable=AsyncMock, side_effect=LLMServerError(status_code=503, detail="overloaded")),
+            patch("app.workflows.agent_workflow.write_breeth_episode_activity", new_callable=AsyncMock, side_effect=BreethServerError(status_code=500, detail="internal error")),
+        ):
+            wf = AgentWorkflow()
+            result = await wf.run("agent_multi_fail_test")
 
-            if "record_and_increment" in func_name:
-                return 10
-            if "prediction_sweep" in func_name:
-                raise BreethTimeoutError("Breeth down for predictions")
-            if "discover" in func_name:
-                return [mock_topic]
-            if "recall" in func_name:
-                raise BreethTimeoutError("Breeth down for recall")
-            if "behaviors" in func_name:
-                raise RuntimeError("Behaviors crashed")
-            if "judge" in func_name:
-                return {"accepted": True, "reason": "Score 92"}
-            if "self_audit" in func_name:
-                raise SelfAuditError("Audit DB down")
-            if "drafts" in func_name:
-                return [{"post_text": "Resilient multi-fail post", "sources": ["https://example.com"]}]
-            if "critique" in func_name:
-                return {"post_text": "Resilient multi-fail post", "sources": ["https://example.com"]}
-            if "persona" in func_name:
-                raise LLMAuthError(detail="API key expired")
-            if "publish" in func_name:
-                return {"post_id": "p_multi_fail", "text": "Resilient multi-fail post"}
-            if "rationale" in func_name:
-                raise LLMServerError(status_code=503, detail="overloaded")
-            if "breeth" in func_name:
-                raise BreethServerError(status_code=500, detail="internal error")
-            return {}
-
-        monkeypatch.setattr("temporalio.workflow.execute_activity", mock_execute)
-
-        wf = AgentWorkflow()
-        result = await wf.run("agent_multi_fail_test")
-
-        # Despite all these failures, the workflow STILL publishes
         assert result["status"] == "published"
         assert result["post_id"] == "p_multi_fail"
         assert result["cycle_count"] == 10
-        assert result["predictions_swept"] == 0  # Prediction sweep failed
-        assert result["self_audit_executed"] is False  # Audit raised
+        assert result["predictions_swept"] == 0
+        assert result["self_audit_executed"] is False
 
     @pytest.mark.asyncio
-    async def test_workflow_reject_path_survives_breeth_and_debt_failures(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_workflow_reject_path_survives_breeth_and_debt_failures(self) -> None:
         """Reject path: topic debt logging fails, Breeth episode write fails — workflow completes."""
         mock_topic = {"title": "Rejected Multi-Fail", "sources": []}
 
-        async def mock_execute(activity_func, *args, **kwargs):
-            func_name = getattr(activity_func, "__name__", str(activity_func))
-
-            if "record_and_increment" in func_name:
-                return 1
-            if "prediction_sweep" in func_name:
-                return []
-            if "discover" in func_name:
-                return [mock_topic]
-            if "recall" in func_name or "behaviors" in func_name:
-                return {}
-            if "judge" in func_name:
-                return {"accepted": False, "reason": "Score 30 below threshold"}
-            if "debt" in func_name:
-                raise RuntimeError("DB write failed for topic_debt")
-            if "breeth" in func_name:
-                raise BreethServerError(status_code=500, detail="internal error")
-            return {}
-
-        monkeypatch.setattr("temporalio.workflow.execute_activity", mock_execute)
-
-        wf = AgentWorkflow()
-        result = await wf.run("agent_reject_multi_fail_test")
+        with (
+            patch("app.workflows.agent_workflow.record_and_increment_cycle_activity", new_callable=AsyncMock, return_value=1),
+            patch("app.workflows.agent_workflow.prediction_sweep_activity", new_callable=AsyncMock, return_value=[]),
+            patch("app.workflows.agent_workflow.discover_topics_activity", new_callable=AsyncMock, return_value=[mock_topic]),
+            patch("app.workflows.agent_workflow.recall_memory_activity", new_callable=AsyncMock, return_value={}),
+            patch("app.workflows.agent_workflow.run_memory_behaviors_activity", new_callable=AsyncMock, return_value={}),
+            patch("app.workflows.agent_workflow.editorial_judge_activity", new_callable=AsyncMock, return_value={"accepted": False, "reason": "Score 30 below threshold"}),
+            patch("app.workflows.agent_workflow.log_topic_debt_activity", new_callable=AsyncMock, side_effect=RuntimeError("DB write failed for topic_debt")),
+            patch("app.workflows.agent_workflow.write_breeth_episode_activity", new_callable=AsyncMock, side_effect=BreethServerError(status_code=500, detail="internal error")),
+            patch("app.workflows.agent_workflow.self_audit_activity", new_callable=AsyncMock, return_value={"status": "ok"}),
+        ):
+            wf = AgentWorkflow()
+            result = await wf.run("agent_reject_multi_fail_test")
 
         assert result["status"] == "rejected"
         assert result["agent_id"] == "agent_reject_multi_fail_test"
