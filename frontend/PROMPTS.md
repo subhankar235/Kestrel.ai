@@ -15,3 +15,7 @@ Ok after phase 1 now you have to start phase 2 of this project, Frontend Project
 
 Move globals.css to a styles folder and update any required imports
 
+## Prompt
+
+Now start Phase 3 (Framework and Dependency Setup). Complete it carefully.
+
