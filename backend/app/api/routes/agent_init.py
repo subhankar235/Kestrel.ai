@@ -74,7 +74,7 @@ async def init_agent(
 
     await db.commit()
 
-    # 6. Start recurring Temporal Schedule for autonomous agent cycle
+    # 6. Start recurring APScheduler job for autonomous agent cycle
     from app.workflows.schedules import create_agent_schedule
     await create_agent_schedule(generated_agent_id)
 
