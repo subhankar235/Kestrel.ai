@@ -18,11 +18,19 @@ from typing import Any, AsyncGenerator
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from temporalio import activity
 
 from app.core.config import get_settings
-from app.core.exceptions import SelfAuditError
+from app.core.exceptions import (
+    BreethAuthError,
+    BreethClientError,
+    DiscoveryAuthError,
+    DiscoveryClientError,
+    LLMAuthError,
+    LLMClientError,
+    SelfAuditError,
+)
 from app.core.logging import get_logger, log_activity_failure
+from app.workflows.retry import async_retry
 from app.db.session import AsyncSessionLocal, engine
 from app.discovery.discovery_service import discover_candidate_topics
 from app.drafting.draft_generator import generate_draft_angles
@@ -60,7 +68,7 @@ async def get_activity_db() -> AsyncGenerator[AsyncSession, None]:
 # Activity: Discover candidate topics
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=2.0, backoff_coefficient=2.0, non_retryable_errors=[DiscoveryAuthError, DiscoveryClientError], timeout=90)
 async def discover_topics_activity(agent_id: str) -> list[dict[str, Any]]:
     """Activity: Discover candidate topics for the agent's persona domain.
 
@@ -107,7 +115,7 @@ async def discover_topics_activity(agent_id: str) -> list[dict[str, Any]]:
 # Activity: Recall memory context
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=2.0, backoff_coefficient=1.5, non_retryable_errors=[BreethAuthError, BreethClientError], timeout=120)
 async def recall_memory_activity(agent_id: str, topic: dict[str, Any]) -> dict[str, Any]:
     """Activity: Recall associative memory context from Breeth.
 
@@ -131,7 +139,7 @@ async def recall_memory_activity(agent_id: str, topic: dict[str, Any]) -> dict[s
 # Activity: Memory behaviors
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=2.0, backoff_coefficient=1.5, non_retryable_errors=[BreethAuthError, BreethClientError], timeout=120)
 async def run_memory_behaviors_activity(
     agent_id: str, topic: dict[str, Any], memory_context: dict[str, Any]
 ) -> dict[str, Any]:
@@ -202,7 +210,7 @@ async def run_memory_behaviors_activity(
 # Activity: Editorial judge
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=1.0, backoff_coefficient=2.0, non_retryable_errors=[LLMAuthError, LLMClientError], timeout=120)
 async def editorial_judge_activity(
     agent_id: str, topic: dict[str, Any], memory_context: dict[str, Any]
 ) -> dict[str, Any]:
@@ -238,7 +246,7 @@ async def editorial_judge_activity(
 # Activity: Log topic debt
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=1.0, backoff_coefficient=2.0, timeout=120)
 async def log_topic_debt_activity(
     agent_id: str, topic: dict[str, Any], judge_result: dict[str, Any]
 ) -> dict[str, Any]:
@@ -267,7 +275,7 @@ async def log_topic_debt_activity(
 # Activity: Generate draft angles
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=1.0, backoff_coefficient=2.0, non_retryable_errors=[LLMAuthError, LLMClientError], timeout=120)
 async def generate_drafts_activity(
     agent_id: str, topic: dict[str, Any], memory_context: dict[str, Any]
 ) -> list[dict[str, Any]]:
@@ -308,7 +316,7 @@ async def generate_drafts_activity(
 # Activity: Self-critique and draft selection
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=1.0, backoff_coefficient=2.0, non_retryable_errors=[LLMAuthError, LLMClientError], timeout=120)
 async def self_critique_activity(agent_id: str, drafts: list[dict[str, Any]]) -> dict[str, Any]:
     """Activity: Critique candidate drafts and select the winning post."""
     return await critique_and_select_winning_draft(drafts)
@@ -318,7 +326,7 @@ async def self_critique_activity(agent_id: str, drafts: list[dict[str, Any]]) ->
 # Activity: Persona alignment check
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=1.0, backoff_coefficient=2.0, non_retryable_errors=[LLMAuthError, LLMClientError], timeout=120)
 async def persona_check_activity(agent_id: str, winning_draft: dict[str, Any]) -> dict[str, Any]:
     """Activity: Verify winning draft alignment with persona voice."""
     persona_dict = {"name": "Ada", "domain": "AI Security"}
@@ -342,7 +350,7 @@ async def persona_check_activity(agent_id: str, winning_draft: dict[str, Any]) -
 # Activity: Publish final post
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=1.0, backoff_coefficient=2.0, timeout=120)
 async def publish_post_activity(
     agent_id: str, draft: dict[str, Any], topic: dict[str, Any], memory_context: dict[str, Any] | None = None
 ) -> dict[str, Any]:
@@ -361,7 +369,7 @@ async def publish_post_activity(
 # Activity: Build rationale
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=1.0, backoff_coefficient=2.0, non_retryable_errors=[LLMAuthError, LLMClientError], timeout=120)
 async def build_rationale_activity(
     agent_id: str, topic: dict[str, Any], memory_context: dict[str, Any], draft: dict[str, Any]
 ) -> str:
@@ -373,7 +381,7 @@ async def build_rationale_activity(
 # Activity: Write Breeth episode
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=2.0, backoff_coefficient=1.5, non_retryable_errors=[BreethAuthError, BreethClientError], timeout=120)
 async def write_breeth_episode_activity(
     agent_id: str, topic: dict[str, Any], item: dict[str, Any], decision: str
 ) -> dict[str, Any]:
@@ -397,7 +405,7 @@ async def write_breeth_episode_activity(
 # Activity: Self-audit (Phase 21 — fault-tolerant)
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=1, initial_interval=1.0, backoff_coefficient=1.0, timeout=120)
 async def self_audit_activity(agent_id: str) -> dict[str, Any]:
     """Activity: Execute periodic self-audit and constitution review.
 
@@ -471,7 +479,7 @@ async def self_audit_activity(agent_id: str) -> dict[str, Any]:
 # Activity: Cycle counter
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=1.0, backoff_coefficient=2.0, timeout=120)
 async def record_and_increment_cycle_activity(agent_id: str) -> int:
     """Activity: Track and increment agent cycle_count in Postgres system of record."""
     async with get_activity_db() as db:
@@ -491,7 +499,7 @@ async def record_and_increment_cycle_activity(agent_id: str) -> int:
 # Activity: Prediction sweep (secondary scheduled check)
 # ---------------------------------------------------------------------------
 
-@activity.defn
+@async_retry(max_attempts=3, initial_interval=2.0, backoff_coefficient=1.5, non_retryable_errors=[BreethAuthError, BreethClientError], timeout=120)
 async def prediction_sweep_activity(agent_id: str) -> list[dict[str, Any]]:
     """Activity: Secondary scheduled check — prediction-deadline sweep (Phase 16)."""
     from app.memory.behaviors.prediction_update import check_prediction_resolution
