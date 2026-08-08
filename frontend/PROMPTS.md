@@ -34,3 +34,7 @@ Start Phase 7 — Set up Clerk authentication using `proxy.ts` (Next.js 16) inst
 ## Prompt
 
 Start Phase 8 — Create a typed API client (`lib/api-client.ts`) with functions for `initAgent` (POST, authenticated) and `getFeed` (GET, public), including error handling and shared type exports.
+
+## Prompt
+
+Complete Phase 9 — Create the `packages/shared-types` package with `Post`, `FeedResponse`, `InitRequest`, and `InitResponse` types, then re-export them from `frontend/types/feed.ts` for zero-drift frontend-backend contract.
