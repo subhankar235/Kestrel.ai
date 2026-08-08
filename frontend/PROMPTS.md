@@ -19,3 +19,7 @@ Move globals.css to a styles folder and update any required imports
 
 Now start Phase 3 (Framework and Dependency Setup). Complete it carefully.
 
+## Prompt
+
+Complete Phase 4 (Environment / Configuration Setup).
+
