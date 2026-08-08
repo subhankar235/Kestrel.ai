@@ -51,6 +51,12 @@ Skip Docker and CI/CD verification for now. Test the remaining backend checklist
 
 Note: credentials supplied with this prompt were intentionally not copied into this log.
 ```
+
+## Prompt 33 — AGENTS.md Verification Follow-up
+
+```
+also alwsys foloow the agents.md file for prev command aslo
+```
 Phase 24 — Integration / API Tests
 Goal: Test routes against a real (test) DB with mocked external services.
 
