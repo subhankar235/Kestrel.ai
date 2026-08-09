@@ -5,6 +5,10 @@
 
 ## Prompt
 
+now check all have backedn fucntionnalty ?
+
+ok now for now tell me how may pages of frotend can u see now te;l me jusy
+
 what to do now
 
 Initialize Agent
