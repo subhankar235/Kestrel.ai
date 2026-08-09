@@ -15,7 +15,7 @@ export default function SourcesPage() {
         <Radar className="size-5 text-accent" />
         <div><h2 className="font-display text-lg font-semibold">Configured discovery sources</h2><p className="text-xs text-muted-foreground">Live configuration reported by the backend</p></div>
       </section>
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {data.sources.map((source) => (
           <article key={source.name} className="surface-card p-5">
             <div className="flex items-start justify-between gap-3">
@@ -25,6 +25,8 @@ export default function SourcesPage() {
               </Badge>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">{source.kind}</p>
+            {source.url ? <a href={source.url} target="_blank" rel="noreferrer" className="mt-3 block truncate text-xs text-accent hover:underline">{source.url}</a> : null}
+            {source.items ? <p className="mt-2 text-xs text-muted-foreground">Used in {source.items} published post{source.items === 1 ? "" : "s"}{source.lastUsedAt ? ` · last used ${new Date(source.lastUsedAt).toLocaleString()}` : ""}</p> : null}
           </article>
         ))}
       </section>

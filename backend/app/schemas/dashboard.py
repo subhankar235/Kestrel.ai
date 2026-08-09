@@ -43,6 +43,9 @@ class DashboardSource(BaseModel):
     name: str
     kind: str
     configured: bool
+    url: str | None = None
+    items: int = 0
+    lastUsedAt: Any | None = None
 
 
 class DashboardCycleStatus(BaseModel):

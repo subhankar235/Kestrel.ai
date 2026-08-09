@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.core.config import get_settings
+from urllib.parse import urlparse
 from app.memory.breeth_client import list_memory_entities, search_memory
 from app.workflows.schedules import get_agent_schedule
 from app.models.agent import Agent
@@ -104,10 +105,40 @@ async def get_dashboard(
     memory_items = memory_result.results or await list_memory_entities(limit=50)
     schedule = await get_agent_schedule(agent.agent_id)
 
+    source_usage: dict[str, dict[str, object]] = {}
+    for post in posts:
+        if not isinstance(post.sources, list):
+            continue
+        for raw_source in post.sources:
+            source_url = str(raw_source).strip()
+            if not source_url:
+                continue
+            entry = source_usage.setdefault(
+                source_url,
+                {"items": 0, "last_used_at": post.created_at},
+            )
+            entry["items"] = int(entry["items"]) + 1
+            if post.created_at > entry["last_used_at"]:
+                entry["last_used_at"] = post.created_at
+
     sources = [
-        DashboardSource(name="Exa neural search", kind="Web", configured=bool(settings.EXA_API_KEY)),
-        DashboardSource(name="Tavily search", kind="Web", configured=bool(settings.TAVILY_API_KEY)),
+        DashboardSource(
+            name=urlparse(url).netloc or url,
+            kind="Published source",
+            configured=True,
+            url=url,
+            items=int(usage["items"]),
+            lastUsedAt=usage["last_used_at"],
+        )
+        for url, usage in sorted(
+            source_usage.items(), key=lambda item: item[1]["last_used_at"], reverse=True
+        )
     ]
+    if not sources:
+        sources = [
+            DashboardSource(name="Exa neural search", kind="Configured provider", configured=bool(settings.EXA_API_KEY)),
+            DashboardSource(name="Tavily search", kind="Configured provider", configured=bool(settings.TAVILY_API_KEY)),
+        ]
 
     persona_data = None
     if persona is not None:

@@ -33,6 +33,9 @@ export interface DashboardSource {
   name: string;
   kind: string;
   configured: boolean;
+  url?: string | null;
+  items?: number;
+  lastUsedAt?: string | null;
 }
 
 export interface DashboardCycleStatus {
