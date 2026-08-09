@@ -79,12 +79,39 @@ async def publish_final_post(
             session.add(agent)
             await session.flush()
 
+        topic_title = str(topic.get("title") or "").strip()
+        if topic_title:
+            duplicate_res = await session.execute(
+                select(Post)
+                .where(Post.agent_id == agent.id, Post.topic == topic_title)
+                .order_by(Post.created_at.desc())
+                .limit(1)
+            )
+            duplicate = duplicate_res.scalar_one_or_none()
+            if duplicate is not None:
+                logger.info(
+                    f"Skipped duplicate topic '{topic_title}' for agent '{agent_id}'"
+                )
+                return {
+                    "id": duplicate.post_id,
+                    "post_id": duplicate.post_id,
+                    "agent_id": agent_id,
+                    "created_at": duplicate.created_at.isoformat(),
+                    "text": duplicate.text,
+                    "rationale": duplicate.rationale,
+                    "sources": duplicate.sources,
+                    "related_post_id": str(duplicate.related_post_id) if duplicate.related_post_id else None,
+                    "relationship": duplicate.relationship,
+                    "duplicate": True,
+                }
+
         post_id_str = f"p_{uuid.uuid4().hex[:10]}"
 
         post = Post(
             post_id=post_id_str,
             agent_id=agent.id,
             text=post_text,
+            topic=str(topic.get("title") or "") or None,
             rationale=final_rationale,
             sources=sources,
             related_post_id=related_post_id_uuid,
