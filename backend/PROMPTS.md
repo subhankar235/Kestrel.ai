@@ -568,3 +568,11 @@ Coverage required: scorer.py scoring math, judge.py accept/reject boundary at th
 
 Verification: pytest tests/unit -q passes with no external network calls (all HTTP clients mocked). test and imeoemnt...thusfully not just patching...fully imoented
 ```
+
+## Prompt
+
+ok now listen for the rst end points-ok crted reamnaing  what ever and nned endpont and connect with frotend and tyell me...
+
+## Prompt
+
+doo all thse
