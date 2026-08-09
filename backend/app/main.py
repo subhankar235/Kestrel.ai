@@ -10,10 +10,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import agent_feed, agent_init
+from app.api.routes import agent_dashboard, agent_feed, agent_init
 from app.core.config import get_settings
 from app.core.logging import get_logger, init_sentry
 from app.db.session import check_db_connection
+from app.db.schema_compat import ensure_schema_compatibility
 from app.workflows.schedules import (
     restore_active_agent_schedules,
     shutdown_scheduler,
@@ -31,6 +32,7 @@ init_sentry("fastapi")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Verify DB connectivity and start APScheduler on boot; shut down on exit."""
+    await ensure_schema_compatibility()
     try:
         await check_db_connection()
         logger.info("Database connectivity verified")
@@ -85,3 +87,4 @@ async def health() -> dict[str, str]:
 
 app.include_router(agent_init.router, prefix="/api/agent")
 app.include_router(agent_feed.router, prefix="/api/agent")
+app.include_router(agent_dashboard.router, prefix="/api/agent")
