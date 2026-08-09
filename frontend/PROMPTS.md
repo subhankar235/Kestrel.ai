@@ -5,6 +5,10 @@
 
 ## Prompt
 
+i am sing bun for frotend
+
+checl how to sart the fortend
+
 You are a frontend agent You have to do all frontend work of this project first explore a little about this project then just complete the phase 1 of this project, all the context in C:\Users\soumo\OneDrive\Desktop\Kestrel.ai\docs also remember through the session you have follow @frontend/AGENTS.md
 
 ## Prompt
