@@ -151,7 +151,9 @@ export function LiveFeed() {
   const [freshId, setFreshId] = useState<string | null>(null);
 
   // Mount-only so SSR and client markup stay identical.
-  useEffect(() => setPosts(SEED), []);
+  useEffect(() => {
+    queueMicrotask(() => setPosts(SEED));
+  }, []);
 
   useEffect(() => {
     if (posts.length === 0) return;
