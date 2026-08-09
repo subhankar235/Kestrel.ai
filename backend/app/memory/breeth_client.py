@@ -145,6 +145,43 @@ async def search_memory(
         raise BreethAPIError(f"Breeth memory search failed: {exc}") from exc
 
 
+async def list_memory_entities(limit: int = 50) -> list[BreethItem]:
+    """Read indexed graph entities exposed by Breeth's entities endpoint."""
+    settings = get_settings()
+    api_key = settings.BREETH_API_KEY.strip()
+    base_url = settings.BREETH_BASE_URL.rstrip("/")
+    if not api_key or not base_url or "example" in base_url:
+        return []
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                f"{base_url}/v1/entities/",
+                params={"mode": "narrative"},
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            response.raise_for_status()
+            payload = response.json()
+            entities = payload.get("narrative", [])
+            return [
+                BreethItem(
+                    id=str(entity.get("uuid") or entity.get("name")),
+                    text=str(entity.get("summary") or entity.get("name") or ""),
+                    score=float(entity.get("confidence_stored") or 0.0),
+                    metadata={
+                        "entity_name": entity.get("name"),
+                        "degree": entity.get("degree", 0),
+                        "narrative": entity.get("narrative"),
+                    },
+                )
+                for entity in entities[:limit]
+                if entity.get("name")
+            ]
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Breeth entity listing failed: {exc}")
+        return []
+
+
 # ---------------------------------------------------------------------------
 # Write episode
 # ---------------------------------------------------------------------------
@@ -183,7 +220,10 @@ async def write_episode(episode_data: BreethEpisodeIn | dict[str, Any]) -> dict[
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(
                 url,
-                json=episode_payload.model_dump(exclude_none=True),
+                json={
+                    **episode_payload.model_dump(exclude_none=True),
+                    "content": "\n".join(episode_payload.claims) or episode_payload.topic,
+                },
                 headers=headers,
             )
 
