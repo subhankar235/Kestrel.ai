@@ -40,6 +40,7 @@ class Post(Base):
         nullable=False,
     )
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    topic: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     rationale: Mapped[str] = mapped_column(Text, nullable=False)
     sources: Mapped[list[Any]] = mapped_column(JSON, nullable=False, default=list)
     related_post_id: Mapped[Optional[uuid.UUID]] = mapped_column(
