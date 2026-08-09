@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import require_auth
 from app.db.session import get_db
 from app.models.agent import Agent
 from app.models.constitution import Constitution
@@ -31,35 +29,33 @@ router = APIRouter(tags=["agent"])
 async def init_agent(
     request: InitRequest,
     db: AsyncSession = Depends(get_db),
-    _auth: dict[str, Any] = Depends(require_auth),
 ) -> InitResponse:
-    """POST /api/agent/init — protected by Clerk auth, enforces callable-once."""
-    # 1. Enforce callable-once per deployment
-    result = await db.execute(select(Agent))
-    existing_agent = result.scalar_one_or_none()
-    if existing_agent is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Agent initialization has already been performed for this deployment",
-        )
-
-    # 2. Generate unique opaque agentId string (e.g. "abc-123")
+    """POST /api/agent/init — unauthenticated for the current local workflow."""
+    # Generate a unique opaque agentId for every persona creation request.
     generated_agent_id = f"agent_{uuid.uuid4().hex[:8]}"
 
     # 3. Create Agent record
     agent = Agent(
         agent_id=generated_agent_id,
         status="active",
+        publish_interval_minutes=request.publishIntervalMinutes,
+        observation_period_hours=request.observationPeriodHours,
+        start_mode=request.startMode,
+        start_at=request.startAt,
     )
     db.add(agent)
     await db.flush()
 
     # 4. Create Persona record
+    voice_config = build_voice_config(request.persona.name, request.persona.domain)
+    if request.persona.voice:
+        voice_config["voice"] = request.persona.voice
+
     persona = Persona(
         agent_id=agent.id,
         name=request.persona.name,
         domain=request.persona.domain,
-        voice_config=build_voice_config(request.persona.name, request.persona.domain),
+        voice_config=voice_config,
     )
     db.add(persona)
 
@@ -76,6 +72,12 @@ async def init_agent(
 
     # 6. Start recurring APScheduler job for autonomous agent cycle
     from app.workflows.schedules import create_agent_schedule
-    await create_agent_schedule(generated_agent_id)
+    await create_agent_schedule(
+        generated_agent_id,
+        interval_minutes=request.publishIntervalMinutes,
+        start_at=request.startAt if request.startMode == "scheduled" else datetime.now(timezone.utc),
+        observation_period_hours=request.observationPeriodHours,
+        run_immediately=request.startMode == "immediate",
+    )
 
     return InitResponse(agentId=generated_agent_id)
