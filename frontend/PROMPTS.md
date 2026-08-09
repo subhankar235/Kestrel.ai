@@ -5,6 +5,10 @@
 
 ## Prompt
 
+ok so now do all thse...forst for now jst ignore the auth aprt,,focxus on the real frature---later auth part i will do...now
+
+i am not gettign yell me wichh end poiunt backned have also frotend hv
+
 now check all have backedn fucntionnalty ?
 
 ok now for now tell me how may pages of frotend can u see now te;l me jusy
@@ -59,3 +63,27 @@ Complete Phase 10 — Create a `useFeed` hook (`hooks/use-feed.ts`) that manages
 ## Prompt
 
 Complete Phase 11 — Build feed components (`post-card`, `rationale-panel`, `story-thread`, `prediction-badge`, `rejected-topic-badge`) and the `persona-header` component.
+
+## Prompt
+
+ok so now do all thse...forst for now jst ignore the auth aprt,,focxus on the real frature---later auth part i will do...now 1.connect all the endpoint with frotend those alredy jave,,,Backend endpoint	Frontend support
+POST /api/agent/init	initAgent() in frontend/lib/api-client.ts
+GET /api/agent/feed?agentId=...	getFeed() and useFeed() and - Dashboard: Uses mock data.
+- Memory: Uses mock data.
+- Decisions: Uses mock data.
+- Cycles: Uses mock data.
+- Constitution: Uses mock data.
+- Persona: Uses mock data.
+- Sources: Uses mock data. aslo for this,,connect with backedn ,,,so all connect woth backedn,,,
+
+## Prompt
+
+okkk now see these first two api endpisnt are main given by the conpnay,,,ok,,and the rest,,i added later now tell mw,..the rest end points code are avail able,,like the rest endpint can be crted now and connect with frotend >?
+
+## Prompt
+
+first tell me for the prev 2 exted end point how u cinncted woth frotned thighr the quwry prvded ,lib or diorect page,tsx?
+
+## Prompt
+
+but then why in chnegs only i see page.tsx?
