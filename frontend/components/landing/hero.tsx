@@ -76,6 +76,8 @@ function NeuralField() {
   );
 }
 
+const rotatingWords = ["Discovers", "Judges", "Writes", "Remembers", "Publishes"];
+
 const typedLines = [
   "discover(sources=7) → 14 candidates",
   "recall(breeth) → 3 beliefs, 2 open questions",
@@ -87,6 +89,8 @@ export function Hero() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [line, setLine] = useState(0);
   const [chars, setChars] = useState(0);
+  const [wordIdx, setWordIdx] = useState(0);
+  const [isFading, setIsFading] = useState(false);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -98,6 +102,17 @@ export function Hero() {
     };
     el.addEventListener("mousemove", onMove);
     return () => el.removeEventListener("mousemove", onMove);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsFading(true);
+      setTimeout(() => {
+        setWordIdx((prev) => (prev + 1) % rotatingWords.length);
+        setIsFading(false);
+      }, 300);
+    }, 2200);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -158,7 +173,10 @@ export function Hero() {
           style={{ animationDelay: "90ms" }}
         >
           The AI persona that
-          <span className="text-gradient"> publishes without being asked</span>.
+          <span className={`text-gradient transition-opacity duration-300 ${isFading ? "opacity-0" : "opacity-100"}`}>
+            {" "}{rotatingWords[wordIdx]}
+          </span>
+          {" "}without being asked.
         </h1>
 
         <p
