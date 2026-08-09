@@ -19,6 +19,7 @@ interface UseFeedResult {
 export function useFeed(
   agentId: string | null,
   initialPosts?: Post[],
+  allAgents = false,
 ): UseFeedResult {
   const [posts, setPosts] = useState<Post[]>(initialPosts || []);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(
@@ -28,13 +29,13 @@ export function useFeed(
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
 
   const fetchFeed = useCallback(async () => {
-    if (!agentId) return;
+    if (!agentId && !allAgents) return;
 
     setStatus((prev) => (prev === "idle" ? "loading" : prev));
     setError(undefined);
 
     try {
-      const response = await getFeed(agentId);
+      const response = await getFeed(allAgents ? undefined : agentId ?? undefined);
       setPosts((prev) => {
         const existingIds = new Set(prev.map((p) => p.id));
         const newPosts = response.posts.filter((p) => !existingIds.has(p.id));
@@ -50,21 +51,21 @@ export function useFeed(
       }
       setStatus("error");
     }
-  }, [agentId]);
+  }, [agentId, allAgents]);
 
   useEffect(() => {
-    if (!agentId) return;
+    if (!agentId && !allAgents) return;
 
-    fetchFeed();
+    queueMicrotask(fetchFeed);
 
     const interval = setInterval(fetchFeed, POLL_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [agentId, fetchFeed]);
+  }, [agentId, allAgents, fetchFeed]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && agentId) {
+      if (document.visibilityState === "visible" && (agentId || allAgents)) {
         fetchFeed();
       }
     };
@@ -72,7 +73,7 @@ export function useFeed(
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [agentId, fetchFeed]);
+  }, [agentId, allAgents, fetchFeed]);
 
   return { posts, status, error, lastCheckedAt };
 }
