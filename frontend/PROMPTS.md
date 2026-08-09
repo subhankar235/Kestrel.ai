@@ -5,6 +5,11 @@
 
 ## Prompt
 
+what to do now
+
+Initialize Agent
+You are signed in. Agent initialization form coming soon.just hceck why this is comng agter lgin,,dont code antohgn doent mosfy anothing just check why
+
 i am sing bun for frotend
 
 checl how to sart the fortend
