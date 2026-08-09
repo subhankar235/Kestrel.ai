@@ -575,4 +575,94 @@ ok now listen for the rst end points-ok crted reamnaing  what ever and nned endp
 
 ## Prompt
 
+┌──────────────────────────────────────────────┐
+│              Create Your Agent               │
+│                                              │
+│  Define who your autonomous creator is.      │
+│                                              │
+│  Persona Name                                │
+│  ┌────────────────────────────────────────┐  │
+│  │ Tech Observer                          │  │
+│  └────────────────────────────────────────┘  │
+│                                              │
+│  What does this persona create about?        │
+│  ┌────────────────────────────────────────┐  │
+│  │ AI, startups, technology trends...    │  │
+│  └────────────────────────────────────────┘  │
+│                                              │
+│  Personality / Voice                         │
+│  ┌────────────────────────────────────────┐  │
+│  │ Curious, analytical, opinionated...   │  │
+│  └────────────────────────────────────────┘  │
+│                                              │
+│  ───────── Publishing Behavior ────────────  │
+│                                              │
+│  Publishing Frequency                        │
+│  ┌────────────────────────────────────────┐  │
+│  │ Every 4 hours                       ▼ │  │
+│  └────────────────────────────────────────┘  │
+│                                              │
+│  Observation Period                          │
+│  ┌────────────────────────────────────────┐  │
+│  │ 48 hours                              │  │
+│  └────────────────────────────────────────┘  │
+│                                              │
+│  Start Publishing                            │
+│  ○ Immediately                               │
+│  ○ At a specific time                        │
+│                                              │
+│  ┌────────────────────────────────────────┐  │
+│  │        Create & Start Agent            │  │
+│  └────────────────────────────────────────┘  │
+└──────────────────────────────────────────────┘ i want this type of perosna crttion in init,.,,not fixed tim inetval ,,and also in th pwrosna,,page a routing option to init page ,,when someone dfoesnt crted any peosna also..when alredy apeosna or ,many peeosna laoding but user wnat to crt anither there a button by that user can navagute to init and cdrt
+
+## Prompt
+
+two prbelms-1.ic
+8/9/2026, 8:28:46 AM
+[my-agent Deep Dive] Examining the architectural mechanics behind Breaking Local AI Runtimes: 10 vulnerabilities in the Engine Behind Your Open-Source Models | Cyera Research
+[my-agent Deep Dive] Examining the architectural mechanics behind Breaking Local AI Runtimes: 10 vulnerabilities in the Engine Behind Your Open-Source Models | Cyera Research. Key breakdown: Breaking Local AI Runtimes: 10 vulnerabilities in the Engine Behind Your Open-Source Models | Cyera Research
+
+# Breaking Local AI Runtimes: 10 vulnerabilities in the Engine Behind Your Open-Source Models
+
+Cyera Research
+
+August 7, 2026
+
+Share
+
+## Key Findings
+
+- This blog represents a white paper of Engineering teams should evaluate these structural implications immediately.
+
+Why Ada published this
+Why selected
+Selected via autonomous editorial scoring
+Why now
+Live data from the agent feed.
+Editorial score
+Backend score not provided trhis type of dirty response shoing when i askwed for machien lernring,,,to a oeosna,,and also the open roiter failes again anfd again so can rep;ce this setuop of ai by groq api ey
+
+## Prompt
+
 doo all thse
+
+## Prompt
+
+now some prblms,,u hv to solve-1,.in perosna in hsitory type section should be detiled button or navtion for each peeosnal buy that user not only just see the summary also get back to the actula orev [erosna,,...2.in th feed section the pusblosh post.,,not showing it is under wich topic time detiled all
+
+## Prompt
+
+why sam reposne coming after ecah time inertval
+
+## Prompt
+
+LLM auth error 401 User not found; Breeth validation requires body.content; asyncpg CancelledError during a server restart. Solve all errors fully.
+
+## Prompt
+
+also nithns show in feed page dont kwo why...and llm fail back and agian soo,,do onetihgnadd geminu also as fallbk of groq if api key neded tell mew
+
+## Prompt
+
+no open ai need i only hv this 3
