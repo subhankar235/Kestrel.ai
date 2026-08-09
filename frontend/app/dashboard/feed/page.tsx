@@ -1,16 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ExternalLink, Link2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  posts as allPosts,
-  formatDate,
-  relationshipLabel,
-  type Post,
-  type PostRelationship,
-} from "@/lib/mock-data";
+import { useFeed } from "@/hooks/use-feed";
+import type { Post, PostRelationship } from "@/types/feed";
 
 const filters: { key: "ALL" | PostRelationship; label: string }[] = [
   { key: "ALL", label: "All posts" },
@@ -20,8 +15,16 @@ const filters: { key: "ALL" | PostRelationship; label: string }[] = [
   { key: "CONCEPT_GAP", label: "Concept gaps" },
 ];
 
+const relationshipLabel: Record<PostRelationship, string> = {
+  STORY_CONTINUATION: "Story continuation",
+  PREDICTION_RESOLUTION: "Prediction resolution",
+  TOPIC_RESURRECTION: "Topic resurrection",
+  CONCEPT_GAP: "Concept gap",
+};
+
 function PostCard({ post }: { post: Post }) {
   const [open, setOpen] = useState(false);
+  const title = post.text.split(/[.!?]\s/)[0] || post.id;
 
   return (
     <article className="surface-card p-6">
@@ -34,31 +37,12 @@ function PostCard({ post }: { post: Post }) {
         ) : (
           <Badge variant="secondary">New topic</Badge>
         )}
-        {post.chapter ? (
-          <Badge variant="outline" className="font-mono text-[10px]">
-            Chapter {post.chapter}
-          </Badge>
-        ) : null}
-        {post.verdict ? (
-          <Badge
-            variant="secondary"
-            className={
-              post.verdict === "correct"
-                ? "bg-success/15 text-success"
-                : post.verdict === "wrong"
-                  ? "bg-destructive/15 text-destructive"
-                  : "bg-warning/15 text-warning"
-            }
-          >
-            verdict: {post.verdict}
-          </Badge>
-        ) : null}
         <span className="ml-auto font-mono text-[11px] text-muted-foreground">
-          {formatDate(post.createdAt)} UTC
+          {new Date(post.createdAt).toLocaleString()}
         </span>
       </div>
 
-      <h2 className="font-display text-xl font-semibold leading-snug">{post.title}</h2>
+      <h2 className="font-display text-xl font-semibold leading-snug">{title}</h2>
       <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-foreground/85">
         {post.text}
       </p>
@@ -87,25 +71,25 @@ function PostCard({ post }: { post: Post }) {
               <dt className="text-xs uppercase tracking-widest text-muted-foreground">
                 Why selected
               </dt>
-              <dd className="mt-1 text-foreground/85">{post.rationale.whySelected}</dd>
+              <dd className="mt-1 text-foreground/85">{post.rationale}</dd>
             </div>
             <div>
               <dt className="text-xs uppercase tracking-widest text-muted-foreground">Why now</dt>
-              <dd className="mt-1 text-foreground/85">{post.rationale.whyNow}</dd>
+              <dd className="mt-1 text-foreground/85">Live data from the agent feed.</dd>
             </div>
-            {post.rationale.memoryRelationship ? (
+            {post.relationship ? (
               <div>
                 <dt className="text-xs uppercase tracking-widest text-muted-foreground">
                   Memory relationship
                 </dt>
-                <dd className="mt-1 text-foreground/85">{post.rationale.memoryRelationship}</dd>
+                <dd className="mt-1 text-foreground/85">{relationshipLabel[post.relationship]}</dd>
               </div>
             ) : null}
             <div>
               <dt className="text-xs uppercase tracking-widest text-muted-foreground">
                 Editorial score
               </dt>
-              <dd className="mt-1 font-mono">{post.score.toFixed(2)} / threshold 0.72</dd>
+              <dd className="mt-1 font-mono">Backend score not provided</dd>
             </div>
           </dl>
         ) : null}
@@ -113,40 +97,33 @@ function PostCard({ post }: { post: Post }) {
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted-foreground">Sources:</span>
-        {post.sources.map((s) => (
+        {post.sources.map((url) => (
           <a
-            key={s.url + s.label}
-            href={s.url}
+            key={url}
+            href={url}
             target="_blank"
             rel="noreferrer"
-            aria-label={`Source: ${s.label}`}
+            aria-label={`Source: ${url}`}
             className="inline-flex items-center gap-1 rounded-lg border border-[var(--surface-border)] px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-accent"
           >
-            {s.label}
+            {new URL(url).hostname}
             <ExternalLink className="size-3" />
           </a>
         ))}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {post.concepts.map((c) => (
-          <span
-            key={c}
-            className="rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] text-muted-foreground"
-          >
-            #{c}
-          </span>
-        ))}
-      </div>
     </article>
   );
 }
 
 export default function FeedPage() {
   const [filter, setFilter] = useState<"ALL" | PostRelationship>("ALL");
+  const [agentId, setAgentId] = useState<string | null>(null);
+  useEffect(() => setAgentId(window.localStorage.getItem("kestrel.agentId")), []);
+  const { posts: allPosts, status, error, lastCheckedAt } = useFeed(agentId);
   const posts = useMemo(
     () => (filter === "ALL" ? allPosts : allPosts.filter((p) => p.relationship === filter)),
-    [filter],
+    [allPosts, filter],
   );
 
   return (
@@ -168,7 +145,7 @@ export default function FeedPage() {
             <span className="absolute inline-flex size-2 animate-pulse-ring rounded-full bg-success" />
             <span className="relative inline-flex size-2 rounded-full bg-success" />
           </span>
-          Live · checking for updates
+          {status === "error" ? error : lastCheckedAt ? "Live · updated" : "Loading feed..."}
         </span>
       </div>
 
@@ -177,7 +154,7 @@ export default function FeedPage() {
           <div className="surface-card p-10 text-center">
             <p className="font-display text-lg">No posts of this kind yet</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Ada is still researching — memory-driven posts appear as conditions are met.
+              {agentId ? "The agent has not published any posts yet." : "Initialize an agent first."}
             </p>
           </div>
         ) : (
