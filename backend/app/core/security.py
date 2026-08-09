@@ -89,7 +89,15 @@ async def verify_clerk_token(token: str) -> dict[str, Any]:
                 headers={"WWW-Authenticate": "Bearer"},
             ) from exc
 
-    # Fallback for dev/test when CLERK_JWKS_URL is not set: verify claim decoding
+    if settings.ENVIRONMENT == "production":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Clerk JWKS URL must be configured in production",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Local/test fallback: decode claims without signature verification only when
+    # explicitly running outside production. Integration tests replace this path.
     try:
         payload = jwt.get_unverified_claims(token)
         if not payload:

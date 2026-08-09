@@ -7,6 +7,17 @@ import os
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["ENVIRONMENT"] = "local"
 os.environ["SENTRY_DSN"] = ""
+os.environ["OPENAI_API_KEY"] = ""
+os.environ["OPENROUTER_API_KEY"] = ""
+os.environ["OPENROUTER_MODEL"] = ""
+os.environ["OPENAI_BASE_URL"] = ""
+os.environ["BREETH_API_KEY"] = ""
+os.environ["EXA_API_KEY"] = ""
+os.environ["TAVILY_API_KEY"] = ""
+os.environ["GITHUB_TOKEN"] = ""
+
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 from collections.abc import AsyncGenerator
 
@@ -26,11 +37,13 @@ from app.main import app  # noqa: E402
 
 @pytest_asyncio.fixture
 async def db_engine():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    engine_kwargs = {}
+    if TEST_DATABASE_URL.startswith("sqlite"):
+        engine_kwargs = {
+            "connect_args": {"check_same_thread": False},
+            "poolclass": StaticPool,
+        }
+    engine = create_async_engine(TEST_DATABASE_URL, **engine_kwargs)
     async with engine.begin() as conn:
         await conn.run_sync(base.Base.metadata.create_all)
     yield engine

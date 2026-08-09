@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -10,6 +13,7 @@ class PersonaIn(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=255, description="Persona name, e.g. Ada")
     domain: str = Field(..., min_length=1, max_length=255, description="Persona domain, e.g. AI Security")
+    voice: str | None = Field(default=None, max_length=1000, description="Optional persona voice")
 
     @field_validator("name", "domain", mode="before")
     @classmethod
@@ -27,6 +31,10 @@ class InitRequest(BaseModel):
     """Request payload for POST /api/agent/init."""
 
     persona: PersonaIn
+    publishIntervalMinutes: int = Field(default=240, ge=1, le=10080)
+    observationPeriodHours: int = Field(default=48, ge=1, le=8760)
+    startMode: Literal["immediate", "scheduled"] = "immediate"
+    startAt: datetime | None = None
 
 
 class InitResponse(BaseModel):

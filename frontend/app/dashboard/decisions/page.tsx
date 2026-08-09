@@ -1,13 +1,8 @@
+"use client";
+
 import { Ban, CheckCircle2, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { formatDate, posts, stats, topicDebt } from "@/lib/mock-data";
-
-export const metadata = {
-  title: "Decisions — Ada Agent Console",
-  description:
-    "Accepted and rejected topics with scores, reasons and revisit conditions — the agent's editorial judgment in the open.",
-};
+import { useDashboard } from "@/hooks/use-dashboard";
 
 const statusStyle: Record<string, string> = {
   WAITING: "bg-warning/15 text-warning",
@@ -16,6 +11,15 @@ const statusStyle: Record<string, string> = {
 };
 
 export default function DecisionsPage() {
+  const { data, loading, error } = useDashboard();
+  if (loading) return <p className="text-sm text-muted-foreground">Loading decisions...</p>;
+  if (error || !data) return <p className="text-sm text-destructive">{error || "Decisions unavailable"}</p>;
+
+  const accepted = data.posts;
+  const rejected = data.topicDebt;
+  const total = accepted.length + rejected.length;
+  const acceptanceRate = total ? Math.round((accepted.length / total) * 100) : 0;
+
   return (
     <div className="space-y-6 pb-12">
       <section className="surface-card p-5">
@@ -27,20 +31,20 @@ export default function DecisionsPage() {
             </p>
           </div>
           <p className="font-display text-3xl font-semibold">
-            {stats.acceptanceRate}
+            {acceptanceRate}
             <span className="text-base text-muted-foreground">% accepted</span>
           </p>
         </div>
         <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-secondary">
           <div
             className="bg-gradient-to-r from-primary to-accent"
-            style={{ width: `${stats.acceptanceRate}%` }}
+             style={{ width: `${acceptanceRate}%` }}
             aria-label="accepted share"
           />
         </div>
         <div className="mt-2 flex justify-between font-mono text-[11px] text-muted-foreground">
-          <span>{stats.published} published</span>
-          <span>{stats.rejected} rejected · {stats.topicDebt} in debt queue</span>
+           <span>{accepted.length} published</span>
+           <span>{rejected.length} rejected · {rejected.length} in debt queue</span>
         </div>
       </section>
 
@@ -49,31 +53,26 @@ export default function DecisionsPage() {
           <h2 className="mb-4 flex items-center gap-2 font-display text-base font-semibold">
             <CheckCircle2 className="size-4 text-success" /> Accepted
           </h2>
-          <ul className="space-y-3">
-            {posts.map((p) => (
-              <li key={p.id} className="rounded-xl border border-[var(--surface-border)] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-medium leading-snug">{p.title}</p>
-                  <span className="font-mono text-xs text-success">{p.score.toFixed(2)}</span>
-                </div>
-                <p className="mt-1.5 text-xs text-muted-foreground">{p.rationale.whySelected}</p>
-                <div className="mt-3">
-                  <Progress value={p.score * 100} className="h-1" />
-                </div>
-                <p className="mt-2 font-mono text-[10px] text-muted-foreground">
-                  {p.id} · {formatDate(p.createdAt)} UTC
-                </p>
+           {accepted.length === 0 ? <p className="text-sm text-muted-foreground">No accepted posts recorded yet.</p> : <ul className="space-y-3">
+              {accepted.map((p) => (
+               <li key={p.id} className="rounded-xl border border-[var(--surface-border)] p-4">
+                 <div className="flex items-start justify-between gap-3">
+                   <p className="text-sm font-medium leading-snug">{p.text.split(/[.!?]\s/)[0] || p.id}</p>
+                   <span className="font-mono text-xs text-success">available in workflow data</span>
+                 </div>
+                 <p className="mt-1.5 text-xs text-muted-foreground">{p.rationale}</p>
+                 <p className="mt-2 font-mono text-[10px] text-muted-foreground">{p.id} · {new Date(p.createdAt).toLocaleString()}</p>
               </li>
-            ))}
-          </ul>
+             ))}
+           </ul>}
         </div>
 
         <div className="surface-card p-5">
           <h2 className="mb-4 flex items-center gap-2 font-display text-base font-semibold">
             <Ban className="size-4 text-destructive" /> Rejected — topic debt
           </h2>
-          <ul className="space-y-3">
-            {topicDebt.map((t) => (
+           {rejected.length === 0 ? <p className="text-sm text-muted-foreground">No rejected topics or topic debt recorded yet.</p> : <ul className="space-y-3">
+              {rejected.map((t) => (
               <li key={t.id} className="rounded-xl border border-[var(--surface-border)] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm font-medium leading-snug">{t.title}</p>
@@ -88,21 +87,13 @@ export default function DecisionsPage() {
                   <Badge variant="secondary" className={statusStyle[t.status]}>
                     {t.status.toLowerCase()}
                   </Badge>
-                  {t.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] text-muted-foreground"
-                    >
-                      {tag}
-                    </span>
-                  ))}
                   <span className="ml-auto font-mono text-[10px] text-muted-foreground">
                     {t.id}
                   </span>
                 </div>
               </li>
-            ))}
-          </ul>
+             ))}
+           </ul>}
         </div>
       </section>
     </div>

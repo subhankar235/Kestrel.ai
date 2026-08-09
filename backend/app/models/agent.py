@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import DateTime, String, UUID
+from sqlalchemy import DateTime, Integer, String, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -36,6 +36,11 @@ class Agent(Base):
     )
     status: Mapped[str] = mapped_column(String(50), default="active", nullable=False)
     temporal_workflow_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    cycle_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    publish_interval_minutes: Mapped[int] = mapped_column(Integer, default=240, nullable=False)
+    observation_period_hours: Mapped[int] = mapped_column(Integer, default=48, nullable=False)
+    start_mode: Mapped[str] = mapped_column(String(20), default="immediate", nullable=False)
+    start_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     personas: Mapped[list[Persona]] = relationship(

@@ -14,8 +14,10 @@ class PostOut(BaseModel):
     id: str = Field(..., min_length=1, max_length=255, description="Post identifier string e.g. p1")
     createdAt: datetime = Field(..., description="Post creation timestamp")
     text: str = Field(..., description="Published post text")
+    topic: str | None = Field(default=None, description="Topic that produced the post")
     rationale: str = Field(..., description="Selection rationale text")
     sources: list[str] = Field(default_factory=list, description="Source URLs")
+    agentId: str | None = None
 
     @field_serializer("createdAt")
     def serialize_created_at(self, dt: datetime, _info: Any) -> str:

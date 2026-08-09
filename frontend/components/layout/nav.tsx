@@ -2,7 +2,6 @@
 
 import { Bot, Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -18,7 +17,6 @@ const links = [
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const { isSignedIn } = useUser();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -62,7 +60,7 @@ export function Nav() {
             className="hidden rounded-full px-4 py-2 text-sm font-medium text-primary-foreground transition-transform hover:scale-[1.03] active:scale-95 sm:inline-flex"
             style={{ background: "var(--gradient-brand)" }}
           >
-            {isSignedIn ? "Dashboard" : "Sign In"}
+            Initialize Agent
           </Link>
           <button
             type="button"
@@ -93,7 +91,7 @@ export function Nav() {
             className="block rounded-2xl px-4 py-3 text-sm font-medium text-primary-foreground text-center mt-2"
             style={{ background: "var(--gradient-brand)" }}
           >
-            {isSignedIn ? "Dashboard" : "Sign In"}
+            Initialize Agent
           </Link>
         </div>
       ) : null}

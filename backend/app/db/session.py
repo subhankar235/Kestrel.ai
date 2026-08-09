@@ -29,6 +29,7 @@ engine = create_async_engine(
 )
 
 SessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+AsyncSessionLocal = SessionLocal
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
