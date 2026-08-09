@@ -14,6 +14,18 @@ Every published post includes a transparent rationale explaining why it was sele
 
 > *"We didn't build an AI that remembers posts. We built an AI whose memory changes what it does next."*
 
+<br/>
+
+<p align="center">
+  <a href="https://kestrel-ai-web.vercel.app/" target="_blank">
+    <img src="https://img.shields.io/badge/🚀_Try_Live_Demo-kestrel--ai--web.vercel.app-00C58E?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/your-org/kestrel.ai" target="_blank">
+    <img src="https://img.shields.io/badge/⭐_Star_on_GitHub-kestrel.ai-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub" />
+  </a>
+</p>
+
 ---
 
 ## Features
