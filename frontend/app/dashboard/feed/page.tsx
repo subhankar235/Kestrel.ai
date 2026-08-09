@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, ExternalLink, Link2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,18 @@ const relationshipLabel: Record<PostRelationship, string> = {
   CONCEPT_GAP: "Concept gap",
 };
 
+function cleanPostText(text: string) {
+  return text
+    .split("\n")
+    .map((line) => line.trim().replace(/^#{1,6}\s*/, ""))
+    .filter((line) => line && !["Share", "Key Findings"].includes(line))
+    .join("\n");
+}
+
 function PostCard({ post }: { post: Post }) {
   const [open, setOpen] = useState(false);
-  const title = post.text.split(/[.!?]\s/)[0] || post.id;
+  const cleanText = cleanPostText(post.text);
+  const title = cleanText.split(/[.!?]\s/)[0] || post.id;
 
   return (
     <article className="surface-card p-6">
@@ -38,13 +47,14 @@ function PostCard({ post }: { post: Post }) {
           <Badge variant="secondary">New topic</Badge>
         )}
         <span className="ml-auto font-mono text-[11px] text-muted-foreground">
-          {new Date(post.createdAt).toLocaleString()}
+          Published {new Date(post.createdAt).toLocaleString()}
         </span>
       </div>
 
-      <h2 className="font-display text-xl font-semibold leading-snug">{title}</h2>
+      <p className="mb-2 text-xs uppercase tracking-widest text-muted-foreground">Topic</p>
+      <h2 className="font-display text-xl font-semibold leading-snug">{post.topic || title}</h2>
       <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-foreground/85">
-        {post.text}
+        {cleanText}
       </p>
 
       {post.relatedPostId ? (
@@ -118,12 +128,23 @@ function PostCard({ post }: { post: Post }) {
 
 export default function FeedPage() {
   const [filter, setFilter] = useState<"ALL" | PostRelationship>("ALL");
-  const [agentId, setAgentId] = useState<string | null>(null);
-  useEffect(() => setAgentId(window.localStorage.getItem("kestrel.agentId")), []);
-  const { posts: allPosts, status, error, lastCheckedAt } = useFeed(agentId);
+  const [agentId] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : window.localStorage.getItem("kestrel.agentId"),
+  );
+  const { posts: allPosts, status, error, lastCheckedAt } = useFeed(agentId, undefined, true);
+  const uniquePosts = useMemo(() => {
+    const seenTopics = new Set<string>();
+    return allPosts.filter((post) => {
+      const key = post.topic?.trim().toLowerCase();
+      if (!key) return true;
+      if (seenTopics.has(key)) return false;
+      seenTopics.add(key);
+      return true;
+    });
+  }, [allPosts]);
   const posts = useMemo(
-    () => (filter === "ALL" ? allPosts : allPosts.filter((p) => p.relationship === filter)),
-    [allPosts, filter],
+    () => (filter === "ALL" ? uniquePosts : uniquePosts.filter((p) => p.relationship === filter)),
+    [filter, uniquePosts],
   );
 
   return (
@@ -154,7 +175,7 @@ export default function FeedPage() {
           <div className="surface-card p-10 text-center">
             <p className="font-display text-lg">No posts of this kind yet</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              {agentId ? "The agent has not published any posts yet." : "Initialize an agent first."}
+              {status === "error" ? error : "No posts have been published yet."}
             </p>
           </div>
         ) : (
