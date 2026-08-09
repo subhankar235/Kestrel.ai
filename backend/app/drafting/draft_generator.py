@@ -11,6 +11,19 @@ from app.llm.prompts.draft import build_draft_prompt
 logger = get_logger(__name__)
 
 
+def _clean_fallback_summary(summary: str) -> str:
+    """Keep fallback drafts readable when a source contains raw article markdown."""
+    lines: list[str] = []
+    for line in summary.splitlines():
+        cleaned = line.strip().lstrip("#*- ")
+        if not cleaned or cleaned.lower() in {"share", "key findings"}:
+            continue
+        if len(cleaned) < 40 and (cleaned.endswith("2026") or cleaned.startswith("August")):
+            continue
+        lines.append(cleaned)
+    return " ".join(" ".join(lines).split())[:700]
+
+
 async def generate_draft_angles(
     topic: dict[str, Any],
     persona: dict[str, Any],
@@ -26,6 +39,7 @@ async def generate_draft_angles(
     memory_ctx = memory_context or {}
     title = str(topic.get("title", "Research Update"))
     summary = str(topic.get("summary", "Key findings and research insights."))
+    summary = _clean_fallback_summary(summary)
     sources = topic.get("sources") or ["https://example.com/research"]
     if not isinstance(sources, list):
         sources = [str(sources)]
