@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy import text
 
 from app.db.session import engine
+from app.models.cycle_run import CycleRun
 
 
 async def ensure_schema_compatibility() -> None:
@@ -13,6 +14,7 @@ async def ensure_schema_compatibility() -> None:
         return
 
     async with engine.begin() as connection:
+        await connection.run_sync(lambda sync_connection: CycleRun.__table__.create(sync_connection, checkfirst=True))
         await connection.execute(
             text(
                 "ALTER TABLE agents "

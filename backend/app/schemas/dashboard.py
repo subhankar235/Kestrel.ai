@@ -55,6 +55,19 @@ class DashboardCycleStatus(BaseModel):
     note: str | None = None
 
 
+class DashboardCycleRun(BaseModel):
+    id: str
+    cycleNumber: int
+    startedAt: Any
+    finishedAt: Any | None = None
+    status: str
+    topic: str | None = None
+    published: int
+    rejected: int
+    error: str | None = None
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
 class AgentSummary(BaseModel):
     agentId: str
     status: str
@@ -84,3 +97,4 @@ class DashboardResponse(BaseModel):
     memory: list[DashboardMemoryItem] = Field(default_factory=list)
     cycle: DashboardCycleStatus | None = None
     sources: list[DashboardSource] = Field(default_factory=list)
+    cycles: list[DashboardCycleRun] = Field(default_factory=list)

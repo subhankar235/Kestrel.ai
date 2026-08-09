@@ -45,6 +45,19 @@ export interface DashboardCycleStatus {
   note?: string | null;
 }
 
+export interface DashboardCycleRun {
+  id: string;
+  cycleNumber: number;
+  startedAt: string;
+  finishedAt?: string | null;
+  status: string;
+  topic?: string | null;
+  published: number;
+  rejected: number;
+  error?: string | null;
+  details: Record<string, unknown>;
+}
+
 export interface AgentSummary {
   agentId: string;
   status: string;
@@ -79,4 +92,5 @@ export interface DashboardResponse {
   memory: DashboardMemoryItem[];
   cycle: DashboardCycleStatus | null;
   sources: DashboardSource[];
+  cycles: DashboardCycleRun[];
 }

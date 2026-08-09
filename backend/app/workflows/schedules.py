@@ -13,6 +13,7 @@ from typing import Any
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
@@ -52,6 +53,28 @@ async def _run_agent_cycle(agent_id: str) -> None:
     """Callback invoked by APScheduler — runs one autonomous agent cycle."""
     from app.workflows.agent_workflow import AgentWorkflow
 
+    from app.db.session import AsyncSessionLocal
+    from app.models.agent import Agent
+    from app.models.cycle_run import CycleRun
+
+    cycle_run_id = None
+    started_at = datetime.now(timezone.utc)
+    try:
+        async with AsyncSessionLocal() as db:
+            agent_result = await db.execute(select(Agent).where(Agent.agent_id == agent_id))
+            agent = agent_result.scalar_one_or_none()
+            if agent is not None:
+                cycle_run = CycleRun(
+                    agent_id=agent.id,
+                    cycle_number=(agent.cycle_count or 0) + 1,
+                    started_at=started_at,
+                )
+                db.add(cycle_run)
+                await db.commit()
+                cycle_run_id = cycle_run.id
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Could not create cycle history for '{agent_id}': {exc}")
+
     logger.info(f"APScheduler firing agent cycle for '{agent_id}'")
     try:
         wf = AgentWorkflow()
@@ -60,11 +83,33 @@ async def _run_agent_cycle(agent_id: str) -> None:
             f"Agent cycle completed for '{agent_id}': status={result.get('status')}",
             extra={"agent_id": agent_id, "result_status": result.get("status")},
         )
-    except Exception as exc:  # noqa: BLE001
+        cycle_status = str(result.get("status", "completed"))
+        cycle_error = None
+    except BaseException as exc:  # noqa: BLE001
+        result = {}
+        cycle_status = "cancelled" if isinstance(exc, asyncio.CancelledError) else "failed"
+        cycle_error = str(exc)
         logger.error(
             f"Agent cycle failed for '{agent_id}': {exc}",
             extra={"agent_id": agent_id, "error": str(exc)},
         )
+    finally:
+        if cycle_run_id is not None:
+            try:
+                async with AsyncSessionLocal() as db:
+                    run_result = await db.execute(select(CycleRun).where(CycleRun.id == cycle_run_id))
+                    cycle_run = run_result.scalar_one_or_none()
+                    if cycle_run is not None:
+                        cycle_run.finished_at = datetime.now(timezone.utc)
+                        cycle_run.status = cycle_status
+                        cycle_run.topic = result.get("topic")
+                        cycle_run.published = 1 if cycle_status == "published" else 0
+                        cycle_run.rejected = 1 if cycle_status == "rejected" else 0
+                        cycle_run.error = cycle_error
+                        cycle_run.details = result
+                        await db.commit()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(f"Could not finalize cycle history for '{agent_id}': {exc}")
 
 
 async def create_agent_schedule(

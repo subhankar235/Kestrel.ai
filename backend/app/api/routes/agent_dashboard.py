@@ -16,6 +16,7 @@ from app.models.constitution import Constitution
 from app.models.persona import Persona
 from app.models.post import Post
 from app.models.topic_debt import TopicDebt
+from app.models.cycle_run import CycleRun
 from app.schemas.dashboard import (
     AgentSummary,
     AgentsResponse,
@@ -94,6 +95,13 @@ async def get_dashboard(
         .order_by(TopicDebt.created_at.desc())
     )
     topic_debt = debt_result.scalars().all()
+    cycle_result = await db.execute(
+        select(CycleRun)
+        .where(CycleRun.agent_id == agent.id)
+        .order_by(CycleRun.started_at.desc())
+        .limit(100)
+    )
+    cycle_runs = cycle_result.scalars().all()
 
     settings = get_settings()
     persona_query = f"{persona.name} {persona.domain}" if persona else agent.agent_id
@@ -211,4 +219,19 @@ async def get_dashboard(
             note=schedule.get("note"),
         ),
         sources=sources,
+        cycles=[
+            {
+                "id": str(run.id),
+                "cycleNumber": run.cycle_number,
+                "startedAt": run.started_at,
+                "finishedAt": run.finished_at,
+                "status": run.status,
+                "topic": run.topic,
+                "published": run.published,
+                "rejected": run.rejected,
+                "error": run.error,
+                "details": run.details,
+            }
+            for run in cycle_runs
+        ],
     )
