@@ -1,4 +1,4 @@
-"""Orchestrates multi-source discovery (Exa, Tavily, RSS, GitHub) into candidate topics."""
+"""Orchestrates configured Exa and Tavily discovery into candidate topics."""
 
 from __future__ import annotations
 
@@ -8,8 +8,6 @@ from typing import Any
 from app.core.logging import get_logger
 from app.discovery.normalizer import normalize_raw_content
 from app.discovery.sources.exa_client import fetch_exa_topics
-from app.discovery.sources.github_client import fetch_github_topics
-from app.discovery.sources.rss_client import fetch_rss_topics
 from app.discovery.sources.tavily_client import fetch_tavily_topics
 
 logger = get_logger(__name__)
@@ -48,8 +46,6 @@ async def discover_candidate_topics(domain: str) -> list[dict[str, Any]]:
     results = await asyncio.gather(
         fetch_exa_topics(query),
         fetch_tavily_topics(query),
-        fetch_rss_topics(),
-        fetch_github_topics(query),
         return_exceptions=True,
     )
 
@@ -78,4 +74,3 @@ async def discover_candidate_topics(domain: str) -> list[dict[str, Any]]:
         },
     )
     return normalized_topics
-
