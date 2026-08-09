@@ -8,10 +8,12 @@ export interface Post {
   id: string;
   createdAt: string;
   text: string;
+  topic?: string;
   rationale: string;
   sources: string[];
   relatedPostId?: string;
   relationship?: PostRelationship;
+  agentId?: string;
 }
 
 export interface FeedResponse {
