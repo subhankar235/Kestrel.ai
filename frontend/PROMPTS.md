@@ -87,3 +87,31 @@ first tell me for the prev 2 exted end point how u cinncted woth frotned thighr 
 ## Prompt
 
 but then why in chnegs only i see page.tsx?
+
+## Prompt
+
+what to do next
+
+## Prompt
+
+do i ndd to code ?
+
+## Prompt
+
+doo all thse
+
+## Prompt
+
+check all cinnected or not again and also
+
+## Prompt
+
+connect 1000% fully noexcuse no dlay3
+
+## Prompt
+
+install all neded bun depncdencies
+
+## Prompt
+
+ok now tell me how to crt perosna route nam3
