@@ -39,15 +39,23 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o-mini"
     OPENROUTER_MODEL: str = ""
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    GROQ_API_KEY: str = ""
+    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GEMINI_API_KEY: str = ""
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
 
     @property
     def llm_api_key(self) -> str:
-        """Returns OpenRouter API key if present, otherwise OpenAI API key."""
-        return self.OPENROUTER_API_KEY.strip() or self.OPENAI_API_KEY.strip()
+        """Prefer Groq, then OpenRouter, then direct OpenAI."""
+        return self.GROQ_API_KEY.strip() or self.OPENROUTER_API_KEY.strip() or self.OPENAI_API_KEY.strip()
 
     @property
     def llm_base_url(self) -> str | None:
         """Returns base URL for OpenRouter or custom OpenAI proxy if set."""
+        if self.GROQ_API_KEY.strip():
+            return self.GROQ_BASE_URL.strip()
         if self.OPENAI_BASE_URL.strip():
             return self.OPENAI_BASE_URL.strip()
         if self.OPENROUTER_API_KEY.strip() or self.OPENROUTER_MODEL.strip():
@@ -56,7 +64,9 @@ class Settings(BaseSettings):
 
     @property
     def llm_model(self) -> str:
-        """Return the configured OpenRouter model when using OpenRouter."""
+        """Return the configured model for the active provider."""
+        if self.GROQ_API_KEY.strip():
+            return self.GROQ_MODEL.strip()
         if self.OPENROUTER_MODEL.strip():
             return self.OPENROUTER_MODEL.strip()
         return self.OPENAI_MODEL.strip()
