@@ -7,6 +7,8 @@ stored in Postgres via the Agent model's cycle_count / updated_at.
 
 from __future__ import annotations
 
+import asyncio
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -65,10 +67,17 @@ async def _run_agent_cycle(agent_id: str) -> None:
         )
 
 
-async def create_agent_schedule(agent_id: str, interval_minutes: int | None = None) -> str:
+async def create_agent_schedule(
+    agent_id: str,
+    interval_minutes: int | None = None,
+    start_at: datetime | None = None,
+    observation_period_hours: int | None = None,
+    run_immediately: bool = False,
+) -> str:
     """Register a recurring APScheduler job for the agent."""
     settings = get_settings()
     cycle_interval = interval_minutes or settings.PUBLISH_CYCLE_INTERVAL_MINUTES
+    effective_start = start_at or datetime.now(timezone.utc)
     schedule_id = f"schedule_{agent_id}"
 
     try:
@@ -81,11 +90,20 @@ async def create_agent_schedule(agent_id: str, interval_minutes: int | None = No
         scheduler.add_job(
             _run_agent_cycle,
             trigger=IntervalTrigger(minutes=cycle_interval),
+            start_date=effective_start,
+            end_date=(
+                effective_start
+                + timedelta(hours=observation_period_hours)
+                if observation_period_hours
+                else None
+            ),
             id=schedule_id,
             args=[agent_id],
             name=f"Agent cycle: {agent_id} (every {cycle_interval}m)",
             replace_existing=True,
         )
+        if run_immediately and effective_start <= datetime.now(timezone.utc):
+            asyncio.create_task(_run_agent_cycle(agent_id))
         logger.info(f"Registered APScheduler job '{schedule_id}' every {cycle_interval} minutes")
         return schedule_id
 
@@ -188,7 +206,12 @@ async def restore_active_agent_schedules() -> int:
             result = await db.execute(select(Agent).where(Agent.status == "active"))
             agents = result.scalars().all()
             for agent in agents:
-                await create_agent_schedule(agent.agent_id)
+                await create_agent_schedule(
+                    agent.agent_id,
+                    interval_minutes=agent.publish_interval_minutes,
+                    start_at=agent.start_at or agent.created_at,
+                    observation_period_hours=agent.observation_period_hours,
+                )
                 restored_count += 1
         if restored_count > 0:
             logger.info(f"Restored {restored_count} active agent schedule(s) into APScheduler")
