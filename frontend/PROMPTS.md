@@ -530,3 +530,13 @@ LLM auth error (non-retryable): Error code: 401 - {'error': {'message': 'User no
 LLM draft generation failed or unavailable
 Activity 'write_episode' failed: Breeth client error 422: Request body failed validation; body.content is required
 solve all erroe fuly plss
+
+
+## Prompt
+
+in the hero The AI persona that publishes without being asked. ,, i want the publishes chnegs after some second to discovers, judges, writes, remembers, publishes .... and these 5 chnges one by one after some sec
+
+
+## Prompt
+
+ook now i want one thing you do that you make a buttion beside Initilize agent that is Dashboard

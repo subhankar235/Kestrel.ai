@@ -56,6 +56,12 @@ export function Nav() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Link
+            href="/dashboard"
+            className="hidden rounded-full px-4 py-2 text-sm font-medium text-foreground transition-transform hover:scale-[1.03] active:scale-95 sm:inline-flex glass"
+          >
+            Dashboard
+          </Link>
+          <Link
             href="/init"
             className="hidden rounded-full px-4 py-2 text-sm font-medium text-primary-foreground transition-transform hover:scale-[1.03] active:scale-95 sm:inline-flex"
             style={{ background: "var(--gradient-brand)" }}
@@ -85,6 +91,13 @@ export function Nav() {
               {l.label}
             </a>
           ))}
+          <Link
+            href="/dashboard"
+            onClick={() => setOpen(false)}
+            className="block rounded-2xl px-4 py-3 text-sm font-medium text-foreground text-center mt-2 glass"
+          >
+            Dashboard
+          </Link>
           <Link
             href="/init"
             onClick={() => setOpen(false)}
