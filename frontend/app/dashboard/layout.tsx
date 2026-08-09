@@ -13,7 +13,7 @@ import {
   Scale,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { persona, stats } from "@/lib/mock-data";
+import { useDashboard } from "@/hooks/use-dashboard";
 
 const nav = [
   { href: "/dashboard", label: "Overview", icon: Gauge, exact: true },
@@ -28,6 +28,8 @@ const nav = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { data } = useDashboard();
+  const persona = data?.persona;
 
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href;
@@ -46,7 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               A
             </span>
             <span className="leading-tight">
-              <span className="block font-display text-sm font-semibold">{persona.name}</span>
+               <span className="block font-display text-sm font-semibold">{persona?.name || "Agent"}</span>
               <span className="block text-[11px] text-muted-foreground">Autonomous agent</span>
             </span>
           </Link>
@@ -76,7 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </span>
               <span className="font-medium">Running autonomously</span>
             </div>
-            Next cycle in {stats.nextCycleInMinutes}m · {stats.uptimeHours}h uptime
+               {data?.cycle?.nextRunTime ? `Next cycle ${data.cycle.nextRunTime}` : "Scheduler status unavailable"}
           </div>
         </aside>
 
@@ -84,12 +86,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <header className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl glass px-4 py-3">
             <div className="min-w-0 flex-1">
               <h1 className="truncate font-display text-lg font-semibold">
-                {persona.name} <span className="text-muted-foreground">·</span>{" "}
-                <span className="text-gradient">{persona.domain}</span>
+                {persona?.name || "Agent"} <span className="text-muted-foreground">·</span>{" "}
+                <span className="text-gradient">{persona?.domain || "Loading"}</span>
               </h1>
               <p className="truncate text-xs text-muted-foreground">
-                agentId {persona.agentId} · constitution {persona.constitutionVersion} · zero human
-                input since init
+                agentId {data?.agentId || "Loading"} · constitution {data?.constitution?.version || "Unavailable"}
               </p>
             </div>
             <nav className="flex gap-1 overflow-x-auto lg:hidden">
