@@ -21,6 +21,8 @@ from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
+ProviderConfig = tuple[str, str, str | None, str]
+
 
 def sanitize_untrusted_input(text: str, max_chars: int = 4000) -> str:
     """Sanitize and truncate raw web/feed text to prevent prompt injection attacks.
@@ -44,11 +46,23 @@ def sanitize_untrusted_input(text: str, max_chars: int = 4000) -> str:
     return safe_text.strip()
 
 
-def get_async_openai_client() -> AsyncOpenAI:
-    """Instantiate AsyncOpenAI client configured for OpenAI or OpenRouter."""
+def _provider_configs(settings: Any) -> list[ProviderConfig]:
+    """Return configured providers in fallback order."""
+    providers: list[ProviderConfig] = []
+    if settings.OPENROUTER_API_KEY.strip():
+        providers.append(("openrouter", settings.OPENROUTER_API_KEY.strip(), settings.OPENROUTER_BASE_URL.strip(), settings.OPENROUTER_MODEL.strip() or "openrouter/free"))
+    if settings.GEMINI_API_KEY.strip():
+        providers.append(("gemini", settings.GEMINI_API_KEY.strip(), settings.GEMINI_BASE_URL.strip(), settings.GEMINI_MODEL.strip()))
+    if settings.GROQ_API_KEY.strip():
+        providers.append(("groq", settings.GROQ_API_KEY.strip(), settings.GROQ_BASE_URL.strip(), settings.GROQ_MODEL.strip()))
+    return providers or [("mock", "mock-key-for-testing", None, settings.OPENAI_MODEL.strip())]
+
+
+def get_async_openai_client(provider: ProviderConfig | None = None) -> AsyncOpenAI:
+    """Instantiate an OpenAI-compatible client for the selected provider."""
     settings = get_settings()
-    api_key = settings.llm_api_key or "mock-key-for-testing"
-    base_url = settings.llm_base_url
+    selected = provider or _provider_configs(settings)[0]
+    _, api_key, base_url, _ = selected
 
     return AsyncOpenAI(
         api_key=api_key,
@@ -63,6 +77,7 @@ async def generate_structured_output(
     temperature: float = 0.7,
     max_tokens: int = 2000,
     max_retries: int = 3,
+    _provider_index: int = 0,
 ) -> dict[str, Any]:
     """Execute LLM chat completion in structured JSON output mode with exponential backoff retries.
 
@@ -74,8 +89,11 @@ async def generate_structured_output(
         RuntimeError: All retries exhausted for retryable errors.
     """
     settings = get_settings()
-    selected_model = model or settings.llm_model
-    client = get_async_openai_client()
+    providers = _provider_configs(settings)
+    provider = providers[min(_provider_index, len(providers) - 1)]
+    provider_name, _, _, provider_model = provider
+    selected_model = model or provider_model
+    client = get_async_openai_client(provider)
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -91,6 +109,7 @@ async def generate_structured_output(
                 "Executing LLM request",
                 extra={
                     "attempt": attempt,
+                    "provider": provider_name,
                     "model": selected_model,
                     "prompt_length": len(prompt),
                 },
@@ -133,7 +152,9 @@ async def generate_structured_output(
                     f"LLM auth error (non-retryable): {exc}",
                     extra={"attempt": attempt, "error": exc_str},
                 )
-                raise typed from exc  # Non-retryable — fail immediately
+                if _provider_index + 1 < len(providers):
+                    break
+                raise typed from exc
 
             if _is_client_error(exc):
                 status = _extract_status_code(exc)
@@ -142,7 +163,9 @@ async def generate_structured_output(
                     f"LLM client error (non-retryable): {exc}",
                     extra={"attempt": attempt, "error": exc_str},
                 )
-                raise typed_client from exc  # Non-retryable — fail immediately
+                if _provider_index + 1 < len(providers):
+                    break
+                raise typed_client from exc
 
             if _is_server_error(exc):
                 status = _extract_status_code(exc)
@@ -165,6 +188,21 @@ async def generate_structured_output(
             if attempt < max_retries:
                 backoff_seconds = 0.5 * (2 ** (attempt - 1))
                 await asyncio.sleep(backoff_seconds)
+
+    if _provider_index + 1 < len(providers):
+        next_provider = providers[_provider_index + 1][0]
+        logger.warning(
+            f"LLM provider {provider_name} exhausted; falling back to {next_provider}"
+        )
+        return await generate_structured_output(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            max_retries=max_retries,
+            _provider_index=_provider_index + 1,
+        )
 
     logger.error(
         "All LLM call retries exhausted",
